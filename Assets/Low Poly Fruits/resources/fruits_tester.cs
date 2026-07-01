@@ -1,30 +1,30 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class fruits_tester : MonoBehaviour {
 
 	public GameObject[] fruits;
-	// Use this for initialization
-	void Start () 
+
+	void Start ()
 	{
-		
+
 	}
-	
-	// Update is called once per frame
-	void Update () 
+
+	void Update ()
 	{
-		
-		fruits[0].transform.RotateAround (Vector3.up, Time.deltaTime);
-		fruits[1].transform.RotateAround (Vector3.up, -Time.deltaTime);
-		fruits[2].transform.RotateAround (Vector3.up, Time.deltaTime);
-		fruits[3].transform.RotateAround (Vector3.up, -Time.deltaTime);
-		fruits[4].transform.RotateAround (Vector3.up, Time.deltaTime);
-		fruits[5].transform.RotateAround (Vector3.up, -Time.deltaTime);
-		fruits[6].transform.RotateAround (Vector3.up, Time.deltaTime);
-		fruits[7].transform.RotateAround (Vector3.up, -Time.deltaTime);
-		fruits[8].transform.RotateAround (Vector3.up, Time.deltaTime);
-		fruits[9].transform.RotateAround (Vector3.up, -Time.deltaTime);
-	
+		// Rotate(eixo, graus) substitui o obsoleto RotateAround(eixo, radianos)
+		// Time.deltaTime * 60f = ~60 graus/s de velocidade de rotação
+		fruits[0].transform.Rotate (Vector3.up,  Time.deltaTime * 60f);
+		fruits[1].transform.Rotate (Vector3.up, -Time.deltaTime * 60f);
+		fruits[2].transform.Rotate (Vector3.up,  Time.deltaTime * 60f);
+		fruits[3].transform.Rotate (Vector3.up, -Time.deltaTime * 60f);
+		fruits[4].transform.Rotate (Vector3.up,  Time.deltaTime * 60f);
+		fruits[5].transform.Rotate (Vector3.up, -Time.deltaTime * 60f);
+		fruits[6].transform.Rotate (Vector3.up,  Time.deltaTime * 60f);
+		fruits[7].transform.Rotate (Vector3.up, -Time.deltaTime * 60f);
+		fruits[8].transform.Rotate (Vector3.up,  Time.deltaTime * 60f);
+		fruits[9].transform.Rotate (Vector3.up, -Time.deltaTime * 60f);
+
 	}
 }
