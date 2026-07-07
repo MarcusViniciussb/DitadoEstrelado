@@ -35,6 +35,12 @@ public class ControladorCamera : MonoBehaviour
     public bool espelharImagem  = true;  // modo "selfie" (RawImage com escala X = -1)
     public bool inverterVertical = false; // ligue se o esqueleto aparecer de cabeça para baixo
 
+    // Margem de segurança: a tela mostra só o miolo do sensor. Assim a mão no
+    // CANTO DA TELA ainda está DENTRO do campo de visão da câmera, com folga
+    // para o rastreador. 1.2 = tela mostra ~83% do quadro da câmera.
+    [Range(1f, 1.5f)] public float zoomDaTela = 1.2f;
+    private float zoomAnterior = 0f;
+
     [Header("Zoom inteligente (2 estagios, como o MediaPipe original)")]
     // Em vez de mandar o frame INTEIRO espremido para a IA, recorta um quadrado
     // ao redor da última posição da mão — a mão chega grande e nítida ao modelo.
@@ -88,6 +94,7 @@ public class ControladorCamera : MonoBehaviour
         // 1280x720: imagem mais nítida na tela e mais detalhe para a IA
         // (se a webcam não suportar, o Unity escolhe a resolução mais próxima)
         minhaCamera = new WebCamTexture(1280, 720);
+        minhaCamera.wrapMode = TextureWrapMode.Clamp; // fora do quadro = repete a borda
         fundoDoEcra.texture = minhaCamera;
         minhaCamera.Play();
 
@@ -185,7 +192,7 @@ public class ControladorCamera : MonoBehaviour
         PontosDaMaoAtuais = pontosDaMao;
 
         // Reposiciona o recorte para o próximo frame seguir a mão
-        if (zoomInteligente) AtualizarCaixaDaMao(pontosDaMao);
+        if (zoomInteligente) AtualizarCaixaDaMao(pontosDaMao, confianca);
 
         // Índice 8 = Index4 = ponta do dedo indicador
         Vector3 posicaoDaIA = pontosDaMao[8];
@@ -236,25 +243,33 @@ public class ControladorCamera : MonoBehaviour
     void AjustarRecorteDaCamera()
     {
         if (minhaCamera == null || minhaCamera.width < 100) return;
-        if (Screen.width == larguraTelaAnterior && Screen.height == alturaTelaAnterior) return;
+        if (Screen.width == larguraTelaAnterior && Screen.height == alturaTelaAnterior &&
+            zoomDaTela == zoomAnterior) return;
         larguraTelaAnterior = Screen.width;
         alturaTelaAnterior  = Screen.height;
+        zoomAnterior        = zoomDaTela;
 
         float aspectoTela   = (float)Screen.width / Screen.height;
         float aspectoCamera = (float)minhaCamera.width / minhaCamera.height;
 
+        // Fração do quadro visível em cada eixo (recorte "cover", sem esticar)
+        float w, h;
         if (aspectoCamera > aspectoTela)
         {
-            // Câmera mais "larga" que a tela → corta as laterais
-            float w = aspectoTela / aspectoCamera;
-            uvRecorte = new Rect((1f - w) * 0.5f, 0f, w, 1f);
+            w = aspectoTela / aspectoCamera; // corta as laterais
+            h = 1f;
         }
         else
         {
-            // Câmera mais "alta" que a tela → corta topo e base
-            float h = aspectoCamera / aspectoTela;
-            uvRecorte = new Rect(0f, (1f - h) * 0.5f, 1f, h);
+            w = 1f;
+            h = aspectoCamera / aspectoTela; // corta topo e base
         }
+
+        // Aplica a margem de segurança (mostra menos → sobra folga nas bordas)
+        w /= zoomDaTela;
+        h /= zoomDaTela;
+
+        uvRecorte = new Rect((1f - w) * 0.5f, (1f - h) * 0.5f, w, h);
         fundoDoEcra.uvRect = uvRecorte;
     }
 
@@ -282,12 +297,16 @@ public class ControladorCamera : MonoBehaviour
         float lado = (ladoCaixaPx > 0f) ? ladoCaixaPx : Mathf.Min(w, h);
         lado = Mathf.Clamp(lado, 160f, Mathf.Min(w, h));
 
-        // Converte centro+lado do recorte em escala/deslocamento normalizados
+        // Converte centro+lado do recorte em escala/deslocamento normalizados.
+        // O recorte pode "vazar" até 30% para fora do quadro: a borda é repetida
+        // (wrap Clamp), mas a mão continua no CENTRO do que a IA analisa —
+        // muito melhor do que empurrar o recorte e descentralizar a mão.
+        const float folga = 0.3f;
         Vector2 escala = new Vector2(lado / w, lado / h);
         Vector2 offset = new Vector2(centroCaixa.x - escala.x * 0.5f,
                                      centroCaixa.y - escala.y * 0.5f);
-        offset.x = Mathf.Clamp(offset.x, 0f, 1f - escala.x);
-        offset.y = Mathf.Clamp(offset.y, 0f, 1f - escala.y);
+        offset.x = Mathf.Clamp(offset.x, -escala.x * folga, 1f - escala.x * (1f - folga));
+        offset.y = Mathf.Clamp(offset.y, -escala.y * folga, 1f - escala.y * (1f - folga));
 
         Graphics.Blit(minhaCamera, texturaRecorte, escala, offset);
         detetive.ProcessImage(texturaRecorte);
@@ -298,7 +317,7 @@ public class ControladorCamera : MonoBehaviour
 
     // Recalcula a caixa de recorte a partir da mão detectada (com suavização,
     // para o recorte deslizar atrás da mão em vez de pular)
-    void AtualizarCaixaDaMao(Vector3[] pontos)
+    void AtualizarCaixaDaMao(Vector3[] pontos, float confianca)
     {
         float minX = 1f, maxX = 0f, minY = 1f, maxY = 0f;
         for (int i = 0; i < 21; i++)
@@ -312,7 +331,11 @@ public class ControladorCamera : MonoBehaviour
         Vector2 centro = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
         float larguraPx = (maxX - minX) * minhaCamera.width;
         float alturaPx  = (maxY - minY) * minhaCamera.height;
-        float alvoLado  = Mathf.Max(larguraPx, alturaPx) * margemDoZoom;
+
+        // Confiança caindo (mão rápida ou perto da borda)? Abre o recorte
+        // para dar mais contexto ao modelo ANTES de perder o rastreio.
+        float margem = margemDoZoom * ((confianca < 0.6f) ? 1.5f : 1f);
+        float alvoLado = Mathf.Max(larguraPx, alturaPx) * margem;
 
         centroCaixa = Vector2.Lerp(centroCaixa, centro, 0.35f);
         ladoCaixaPx = (ladoCaixaPx <= 0f) ? alvoLado : Mathf.Lerp(ladoCaixaPx, alvoLado, 0.25f);
