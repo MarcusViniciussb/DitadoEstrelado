@@ -68,7 +68,10 @@
     <Compile Include="Assets\UIControle.cs" />
     <Compile Include="Assets\Low Poly Fruits\resources\fruits_tester.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
+    <Compile Include="Assets\MenuPrincipal.cs" />
+    <Compile Include="Assets\UIFabrica.cs" />
     <Compile Include="Assets\VisualizadorMaoUI.cs" />
+    <Compile Include="Assets\GerenciadorDeAudio.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\TextMesh Pro\Shaders\TMPro.cginc" />

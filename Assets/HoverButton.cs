@@ -109,11 +109,13 @@ public class HoverButton : MonoBehaviour
         if (imagemCirculo != null) imagemCirculo.fillAmount = 0f;
     }
 
-    // Pega a posição do dedo indicador (ponto 8) em coordenadas de tela
+    // Pega a posição do dedo indicador (ponto 8) em coordenadas de tela.
+    // Usa a conversão do ControladorCamera, que já desconta recorte e espelho —
+    // assim o círculo enche exatamente onde a mão APARECE na tela.
     Vector2 ObterPosicaoMaoNaTela()
     {
         Vector3 kp = controlador.PontosDaMaoAtuais[8]; // ponta do indicador
-        return new Vector2(kp.x * Screen.width, (1f - kp.y) * Screen.height);
+        return controlador.PontoParaTela(kp);
     }
 
     // Verifica se a posição de tela está dentro dos limites deste RectTransform

@@ -51,12 +51,19 @@ public class GerenciadorDeJogo : MonoBehaviour
     }
     public int  IndiceLetraAtual => indiceLetra;
     public int  Pontuacao        => pontuacao;
+
+    // Verdadeiro entre IniciarJogo() e PararJogo() — o menu controla isso
+    public bool JogoIniciado { get; private set; }
+
     public bool JogoTerminado    =>
+        JogoIniciado &&
         !aguardandoCelebracao &&
         (listaEmbaralhada == null || indiceFruta >= listaEmbaralhada.Count);
 
-    // ── Inicialização ────────────────────────────────────────────────────────
-    void Start()
+    // ── Controle do jogo (chamado pelo MenuPrincipal) ────────────────────────
+
+    // Começa (ou recomeça) o jogo do zero: embaralha, zera pontos, mostra a 1ª fruta
+    public void IniciarJogo()
     {
         if (itens == null || itens.Count == 0)
         {
@@ -65,7 +72,24 @@ public class GerenciadorDeJogo : MonoBehaviour
         }
         listaEmbaralhada = new List<PalavraItem>(itens);
         Embaralhar(listaEmbaralhada);
+
+        indiceFruta = 0;
+        indiceLetra = 0;
+        pontuacao   = 0;
+        OnPontuacaoAtualizada?.Invoke(pontuacao);
+
+        aguardandoCelebracao = false;
+        JogoIniciado = true;
         ExibirFrutaAtual();
+    }
+
+    // Interrompe o jogo e limpa a fruta da tela (usado ao voltar para o menu)
+    public void PararJogo()
+    {
+        StopAllCoroutines();
+        aguardandoCelebracao = false;
+        JogoIniciado = false;
+        if (frutaAtual != null) Destroy(frutaAtual);
     }
 
     void Embaralhar(List<PalavraItem> lista)
@@ -83,6 +107,7 @@ public class GerenciadorDeJogo : MonoBehaviour
 
         if (indiceFruta >= listaEmbaralhada.Count)
         {
+            GerenciadorDeAudio.TocarVitoria();
             Debug.Log("Jogo concluido! Pontuacao final: " + pontuacao);
             return;
         }
@@ -104,7 +129,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     // ── Tentativa de letra (chamado pelo ControladorCamera) ──────────────────
     public bool TentarLetra(string letraFeita)
     {
-        if (JogoTerminado || aguardandoCelebracao) return false;
+        if (!JogoIniciado || JogoTerminado || aguardandoCelebracao) return false;
         if (string.IsNullOrEmpty(PalavraAtual)) return false;
 
         if (letraFeita == PalavraAtual[indiceLetra].ToString())
@@ -117,8 +142,13 @@ public class GerenciadorDeJogo : MonoBehaviour
             {
                 AdicionarPontos(bonusPorPalavra); // bônus por completar a palavra
                 aguardandoCelebracao = true;
+                GerenciadorDeAudio.TocarVitoria();
                 OnPalavraCompleta?.Invoke(PalavraAtual);
                 StartCoroutine(AvancarAposCelebracao());
+            }
+            else
+            {
+                GerenciadorDeAudio.TocarAcerto();
             }
             return true;
         }
@@ -130,9 +160,10 @@ public class GerenciadorDeJogo : MonoBehaviour
     // Pula a palavra inteira (sem pontos)
     public void PularPalavra()
     {
-        if (aguardandoCelebracao) return;
+        if (!JogoIniciado || aguardandoCelebracao) return;
         StopAllCoroutines();
         aguardandoCelebracao = false;
+        GerenciadorDeAudio.TocarClique();
         indiceFruta++;
         ExibirFrutaAtual();
         Debug.Log("Palavra pulada.");
@@ -141,9 +172,10 @@ public class GerenciadorDeJogo : MonoBehaviour
     // Avança para a próxima letra (sem pontos)
     public void PularLetra()
     {
-        if (aguardandoCelebracao || string.IsNullOrEmpty(PalavraAtual)) return;
+        if (!JogoIniciado || aguardandoCelebracao || string.IsNullOrEmpty(PalavraAtual)) return;
         if (indiceLetra < PalavraAtual.Length - 1)
         {
+            GerenciadorDeAudio.TocarClique();
             indiceLetra++;
             Debug.Log("Letra pulada. Indice: " + indiceLetra);
         }
@@ -157,9 +189,10 @@ public class GerenciadorDeJogo : MonoBehaviour
     // Volta uma letra (sem alterar pontos)
     public void VoltarLetra()
     {
-        if (aguardandoCelebracao) return;
+        if (!JogoIniciado || aguardandoCelebracao) return;
         if (indiceLetra > 0)
         {
+            GerenciadorDeAudio.TocarClique();
             indiceLetra--;
             Debug.Log("Voltou uma letra. Indice: " + indiceLetra);
         }
