@@ -24,12 +24,23 @@ public class ControladorCamera : MonoBehaviour
     public bool MODO_TREINAMENTO = true;
     public GerenciadorDeJogo gerenciador; // Arraste o GameObject que tem GerenciadorDeJogo aqui
 
+    [Header("Rastreador externo (Python/MediaPipe) — opcional")]
+    // Se o script RastreadorPython estiver rodando, usa o MediaPipe completo
+    // (muito melhor). Senão, cai automaticamente no rastreador interno.
+    public RastreadorExterno rastreadorExterno;
+    public float esperaRastreadorExterno = 3f; // segundos procurando o Python
+    private bool usandoExterno = false;
+
     [Header("Reconhecimento")]
-    public float cooldownReconhecimento = 1.5f; // segundos mínimos entre duas letras reconhecidas
+    public float cooldownReconhecimento = 0.9f; // segundos mínimos entre duas letras reconhecidas
     public float tempoEstabilidade = 0.35f;     // segundos segurando o MESMO sinal para valer
     private float tempoUltimoReconhecimento = -99f;
     private string letraCandidata = "";
     private float tempoLetraCandidata = 0f;
+
+    // Lidos pela interface para mostrar "estou quase reconhecendo a letra X"
+    public string LetraCandidata      { get; private set; } = "";
+    public float  ProgressoCandidata  { get; private set; } = 0f;
 
     [Header("Exibicao da camera")]
     public bool espelharImagem  = true;  // modo "selfie" (RawImage com escala X = -1)
@@ -84,6 +95,34 @@ public class ControladorCamera : MonoBehaviour
 
     void Start()
     {
+        if (rastreadorExterno != null && rastreadorExterno.enabled)
+            StartCoroutine(EscolherFonteDeRastreamento());
+        else
+            IniciarCameraInterna();
+    }
+
+    // Espera alguns segundos pelo rastreador Python; se não aparecer,
+    // liga o rastreador interno antigo (fallback automático)
+    IEnumerator EscolherFonteDeRastreamento()
+    {
+        Debug.Log("Procurando rastreador externo (Python/MediaPipe)...");
+        float limite = Time.time + esperaRastreadorExterno;
+        while (Time.time < limite)
+        {
+            if (rastreadorExterno.Ativo)
+            {
+                usandoExterno = true;
+                Debug.Log("Rastreador EXTERNO conectado! (MediaPipe completo, com profundidade Z)");
+                yield break;
+            }
+            yield return null;
+        }
+        Debug.Log("Rastreador externo nao encontrado — usando o rastreador interno.");
+        IniciarCameraInterna();
+    }
+
+    void IniciarCameraInterna()
+    {
         if (ficheirosDaIA == null)
         {
             Debug.LogError("FATAL: 'ficheirosDaIA' (ResourceSet) nao esta vinculado no Inspector!");
@@ -127,8 +166,8 @@ public class ControladorCamera : MonoBehaviour
 
     void Update()
     {
-        // Guarda: IA ainda não iniciou
-        if (!detetivePronto) return;
+        // Guarda: nenhuma fonte de rastreamento pronta ainda
+        if (!usandoExterno && !detetivePronto) return;
 
         // Input SEMPRE antes de qualquer return.
         // GetKeyDown só existe por 1 frame — se ficar atrás de um return, some para sempre.
@@ -159,9 +198,16 @@ public class ControladorCamera : MonoBehaviour
         // Mantém a imagem sem distorção (recorte central estilo "cover")
         AjustarRecorteDaCamera();
 
-        // Processa novo frame da câmera (apenas quando houver frame novo — performance)
-        if (minhaCamera.isPlaying && minhaCamera.didUpdateThisFrame)
+        if (usandoExterno)
         {
+            // Vídeo vem do Python via UDP (o Python é o dono da webcam)
+            if (rastreadorExterno.Video != null && fundoDoEcra.texture != rastreadorExterno.Video)
+                fundoDoEcra.texture = rastreadorExterno.Video;
+            cameraPronta = rastreadorExterno.Video != null;
+        }
+        else if (minhaCamera.isPlaying && minhaCamera.didUpdateThisFrame)
+        {
+            // Processa novo frame da câmera (apenas quando houver frame novo — performance)
             ProcessarFrame();
             cameraPronta = true;
         }
@@ -171,28 +217,34 @@ public class ControladorCamera : MonoBehaviour
         // Detecção com histerese: precisa de confiança ALTA (0.6) para começar,
         // mas só solta quando cair BEM (0.45). Isso elimina o pisca-pisca do
         // esqueleto quando a confiança fica oscilando perto do limite.
-        float confianca = detetive.Score;
+        float confianca = usandoExterno ? rastreadorExterno.Score : detetive.Score;
         MaoDetectada = MaoDetectada ? (confianca >= 0.45f) : (confianca >= 0.6f);
 
         if (!MaoDetectada)
         {
-            // Perdeu a mão: depois de ~15 frames volta à "busca ampla"
-            // (recorte grande no centro) para reencontrá-la
-            framesSemMao++;
-            if (framesSemMao > 15)
+            // Perdeu a mão (rastreador interno): depois de ~15 frames volta à
+            // "busca ampla" (recorte grande no centro) para reencontrá-la
+            if (!usandoExterno)
             {
-                centroCaixa = new Vector2(0.5f, 0.5f);
-                ladoCaixaPx = 0f;
+                framesSemMao++;
+                if (framesSemMao > 15)
+                {
+                    centroCaixa = new Vector2(0.5f, 0.5f);
+                    ladoCaixaPx = 0f;
+                }
             }
             return;
         }
         framesSemMao = 0;
 
-        Vector3[] pontosDaMao = ColetarPontosDaMao();
+        Vector3[] pontosDaMao = usandoExterno
+            ? (Vector3[])rastreadorExterno.Pontos.Clone()
+            : ColetarPontosDaMao();
         PontosDaMaoAtuais = pontosDaMao;
 
-        // Reposiciona o recorte para o próximo frame seguir a mão
-        if (zoomInteligente) AtualizarCaixaDaMao(pontosDaMao, confianca);
+        // Reposiciona o recorte para o próximo frame seguir a mão (só no interno;
+        // o MediaPipe externo já faz o próprio recorte por dentro)
+        if (zoomInteligente && !usandoExterno) AtualizarCaixaDaMao(pontosDaMao, confianca);
 
         // Índice 8 = Index4 = ponta do dedo indicador
         Vector3 posicaoDaIA = pontosDaMao[8];
@@ -206,26 +258,39 @@ public class ControladorCamera : MonoBehaviour
         if (!MODO_TREINAMENTO && reconhecedor != null && gerenciador != null)
         {
             // Cooldown: ignora reconhecimentos muito rápidos (evita registrar a mesma letra várias vezes)
-            if (Time.time - tempoUltimoReconhecimento < cooldownReconhecimento) return;
+            if (Time.time - tempoUltimoReconhecimento < cooldownReconhecimento)
+            {
+                LimparCandidata();
+                return;
+            }
 
             string letraFeita = reconhecedor.ClassificarLetra(pontosDaMao);
 
             if (letraFeita == "Desconhecido" || letraFeita == "Nenhuma")
             {
-                letraCandidata = "";
+                LimparCandidata();
                 return;
             }
 
             // Filtro de estabilidade: a MESMA letra precisa ser vista por
-            // 'tempoEstabilidade' segundos seguidos antes de valer.
-            // Elimina falsos positivos enquanto a mão troca de um sinal para outro.
+            // alguns instantes seguidos antes de valer. Elimina falsos
+            // positivos enquanto a mão troca de um sinal para outro.
             if (letraFeita != letraCandidata)
             {
                 letraCandidata      = letraFeita;
                 tempoLetraCandidata = Time.time;
-                return;
             }
-            if (Time.time - tempoLetraCandidata < tempoEstabilidade) return;
+
+            // Sinal MUITO parecido com o gravado? Aceita na metade do tempo.
+            float tempoNecessario = (reconhecedor.UltimaDistancia < reconhecedor.toleranciaDeErro * 0.5f)
+                                    ? tempoEstabilidade * 0.5f
+                                    : tempoEstabilidade;
+
+            // A interface lê isto para mostrar a barrinha de progresso do sinal
+            LetraCandidata     = letraCandidata;
+            ProgressoCandidata = Mathf.Clamp01((Time.time - tempoLetraCandidata) / tempoNecessario);
+
+            if (ProgressoCandidata < 1f) return;
 
             bool acertou = gerenciador.TentarLetra(letraFeita);
             if (acertou)
@@ -233,16 +298,41 @@ public class ControladorCamera : MonoBehaviour
                 // Aprendizado automático: cada acerto vira nova amostra de treinamento
                 reconhecedor.AprendizagemAutomatica(letraFeita, pontosDaMao);
                 tempoUltimoReconhecimento = Time.time;
-                letraCandidata = "";
+                LimparCandidata();
             }
         }
+        else
+        {
+            LimparCandidata();
+        }
+    }
+
+    void LimparCandidata()
+    {
+        letraCandidata     = "";
+        LetraCandidata     = "";
+        ProgressoCandidata = 0f;
     }
 
     // Ajusta o pedaço visível do feed (uvRect) para preencher a tela SEM esticar:
     // recorta o centro da imagem, como os apps de câmera de celular fazem.
     void AjustarRecorteDaCamera()
     {
-        if (minhaCamera == null || minhaCamera.width < 100) return;
+        // Dimensões da fonte de vídeo atual (webcam interna OU vídeo do Python)
+        float larguraFonte, alturaFonte;
+        if (usandoExterno)
+        {
+            if (rastreadorExterno.Video == null) return;
+            larguraFonte = rastreadorExterno.Video.width;
+            alturaFonte  = rastreadorExterno.Video.height;
+        }
+        else
+        {
+            if (minhaCamera == null || minhaCamera.width < 100) return;
+            larguraFonte = minhaCamera.width;
+            alturaFonte  = minhaCamera.height;
+        }
+
         if (Screen.width == larguraTelaAnterior && Screen.height == alturaTelaAnterior &&
             zoomDaTela == zoomAnterior) return;
         larguraTelaAnterior = Screen.width;
@@ -250,7 +340,7 @@ public class ControladorCamera : MonoBehaviour
         zoomAnterior        = zoomDaTela;
 
         float aspectoTela   = (float)Screen.width / Screen.height;
-        float aspectoCamera = (float)minhaCamera.width / minhaCamera.height;
+        float aspectoCamera = larguraFonte / alturaFonte;
 
         // Fração do quadro visível em cada eixo (recorte "cover", sem esticar)
         float w, h;
@@ -364,13 +454,19 @@ public class ControladorCamera : MonoBehaviour
         Debug.Log("Prepare a letra [" + letra + "]! Gravando em 3 segundos...");
         yield return new WaitForSeconds(3f);
 
-        if (!detetivePronto || detetive.Score < 0.5f)
+        float confianca = usandoExterno
+            ? rastreadorExterno.Score
+            : (detetivePronto ? detetive.Score : 0f);
+
+        if (confianca < 0.5f)
         {
             Debug.LogError("Falhou! A IA nao detectou sua mao. Tente novamente.");
             yield break;
         }
 
-        Vector3[] pontosAgora = ColetarPontosDaMao();
+        Vector3[] pontosAgora = usandoExterno
+            ? (Vector3[])rastreadorExterno.Pontos.Clone()
+            : ColetarPontosDaMao();
         reconhecedor.GravarLetra(letra, pontosAgora);
     }
 

@@ -235,6 +235,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gerenciador: {fileID: 9000003}
+  controlador: {fileID: 469206617}
   textoScore: {fileID: 0}
 --- !u!114 &9000007
 MonoBehaviour:
@@ -1011,6 +1012,7 @@ GameObject:
   - component: {fileID: 469206618}
   - component: {fileID: 469206617}
   - component: {fileID: 469206620}
+  - component: {fileID: 9000009}
   m_Layer: 5
   m_Name: RawImage
   m_TagString: Untagged
@@ -1060,7 +1062,8 @@ MonoBehaviour:
   translaY: 0
   MODO_TREINAMENTO: 1
   gerenciador: {fileID: 9000003}
-  cooldownReconhecimento: 1.5
+  rastreadorExterno: {fileID: 9000009}
+  cooldownReconhecimento: 0.9
   tempoEstabilidade: 0.35
   espelharImagem: 1
   inverterVertical: 0
@@ -1113,6 +1116,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ReconhecedorLibras
   bancoDeDados: {fileID: 11400000, guid: 5fc1247038b10c84eaa91b1c244f8b3f, type: 2}
   toleranciaDeErro: 6
+--- !u!114 &9000009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 469206615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e3b9d1c5a2f4e6b8c0d2f4a6e8b1d3f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  portaLandmarks: 5052
+  portaVideo: 5053
+  tempoMaximoSemSinal: 1.5
   mostrarDebug: 0
 --- !u!1 &832575517
 GameObject:

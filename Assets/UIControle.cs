@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using System.Text;
@@ -9,12 +10,22 @@ public class UIControle : MonoBehaviour
     [Header("Gerenciador do jogo")]
     public GerenciadorDeJogo gerenciador;
 
+    [Header("Controlador da camera (para a barra do sinal)")]
+    public ControladorCamera controlador;
+
     [Header("Texto da pontuacao (deixe vazio: e criado sozinho)")]
     public TextMeshProUGUI textoScore;
 
     private TextMeshProUGUI tmp;
     private TextMeshProUGUI rotulo;      // "PALAVRA:" pequeno no topo do cartão
     private GameObject      chipScore;   // fundo arredondado atrás da pontuação
+
+    // Barra "reconhecendo o sinal X..." (feedback em tempo real)
+    private GameObject      barraSinal;
+    private Image           preenchimentoSinal;
+    private TextMeshProUGUI letraSinal;
+    private static readonly Color COR_BARRA_INICIO = new Color(0.2f, 0.8f, 1f,   0.9f);
+    private static readonly Color COR_BARRA_FIM    = new Color(0.1f, 0.85f, 0.3f, 1f);
     private string palavraAnterior = null;
     private int    indiceAnterior  = -1;
     private bool   celebrando      = false;
@@ -57,6 +68,26 @@ public class UIControle : MonoBehaviour
             chipScore = chip.gameObject;
             chipScore.SetActive(false); // só aparece durante o jogo
         }
+
+        // Barra de progresso do sinal: mostra "estou quase aceitando a letra X"
+        // — o jogador vê o sistema trabalhando em vez de achar que travou
+        var fundoBarra = UIFabrica.CriarImagem(transform.parent, "BarraSinal",
+            new Color(0f, 0f, 0f, 0.15f), new Vector2(20, 22), new Vector2(340, 16),
+            UIFabrica.Arredondado(), true);
+        UIFabrica.Ancorar(fundoBarra, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+
+        preenchimentoSinal = UIFabrica.CriarImagem(fundoBarra.transform, "Preenchimento",
+            COR_BARRA_INICIO, Vector2.zero, new Vector2(340, 16),
+            UIFabrica.Arredondado(), true);
+        preenchimentoSinal.type       = Image.Type.Filled;
+        preenchimentoSinal.fillMethod = Image.FillMethod.Horizontal;
+        preenchimentoSinal.fillAmount = 0f;
+
+        letraSinal = UIFabrica.CriarTexto(fundoBarra.transform, "Letra", "",
+            34f, new Color(0.25f, 0.25f, 0.3f, 1f), new Vector2(-200, 2), new Vector2(60, 44));
+
+        barraSinal = fundoBarra.gameObject;
+        barraSinal.SetActive(false);
     }
 
     // OnEnable/OnDisable: o painel é ligado/desligado pelo MenuPrincipal,
@@ -112,12 +143,15 @@ public class UIControle : MonoBehaviour
             if (palavraAnterior != "FIM")
             {
                 rotulo.gameObject.SetActive(false);
+                barraSinal.SetActive(false);
                 tmp.color       = COR_PARABENS;
                 tmp.text        = "FIM DO JOGO!";
                 palavraAnterior = "FIM";
             }
             return;
         }
+
+        AtualizarBarraSinal();
 
         string palavraAtual = gerenciador.PalavraAtual;
         int    indiceAtual  = gerenciador.IndiceLetraAtual;
@@ -135,9 +169,27 @@ public class UIControle : MonoBehaviour
         StartCoroutine(RotinaDeCelebracao(palavraCompleta));
     }
 
+    // Mostra/atualiza a barrinha "reconhecendo o sinal X..."
+    void AtualizarBarraSinal()
+    {
+        if (barraSinal == null || controlador == null) return;
+
+        string candidata = controlador.LetraCandidata;
+        bool mostrar = !string.IsNullOrEmpty(candidata);
+
+        if (barraSinal.activeSelf != mostrar) barraSinal.SetActive(mostrar);
+        if (!mostrar) return;
+
+        float progresso = controlador.ProgressoCandidata;
+        preenchimentoSinal.fillAmount = progresso;
+        preenchimentoSinal.color = Color.Lerp(COR_BARRA_INICIO, COR_BARRA_FIM, progresso);
+        letraSinal.text = candidata;
+    }
+
     IEnumerator RotinaDeCelebracao(string palavra)
     {
         celebrando = true;
+        if (barraSinal != null) barraSinal.SetActive(false);
 
         // Mostra palavra completa em verde
         tmp.color = COR_CELEBRACAO;

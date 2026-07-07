@@ -79,6 +79,10 @@ public class ReconhecedorLibras : MonoBehaviour
     public bool mostrarDebug = false;
     private float tempoUltimoDebug = 0f;
 
+    // Distância da última classificação — quanto MENOR, mais parecido o sinal
+    // está com o gravado (o ControladorCamera usa para aceitar mais rápido)
+    public float UltimaDistancia { get; private set; } = float.MaxValue;
+
     // Resumo tipo "A: 7   B: 5   C: 4" — mostrado na tela de treinamento
     public string ResumoDoBanco()
     {
@@ -243,6 +247,7 @@ public class ReconhecedorLibras : MonoBehaviour
         }
 
         float menorDistancia = melhorDistDaLetra[vencedora];
+        UltimaDistancia = menorDistancia;
 
         // Debug: mostra a cada 0.5s a eleição e a distância.
         // Use para calibrar a tolerância: faça o sinal correto, veja a distância
