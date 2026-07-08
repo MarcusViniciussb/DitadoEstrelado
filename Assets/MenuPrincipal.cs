@@ -37,6 +37,8 @@ public class MenuPrincipal : MonoBehaviour
     GameObject botaoSom;           // liga/desliga a música (sempre visível)
     GameObject riscoSom;           // risco vermelho = música desligada
     GameObject botaoPularLetra;    // "PULAR LETRA -5" (aparece junto do outro)
+    GameObject botaoContinuar;     // "CONTINUAR" (só quando há jogo pausado)
+    TextMeshProUGUI rotuloJogar;   // vira "RECOMEÇAR" quando há jogo pausado
 
     GameObject painelSenha;        // teclado numérico da área do professor
     TextMeshProUGUI displaySenha;
@@ -142,8 +144,17 @@ public class MenuPrincipal : MonoBehaviour
         textoRecorde = UIFabrica.CriarTexto(telaMenu.transform, "Recorde", "",
             36f, COR_TITULO, new Vector2(0, 295), new Vector2(700, 55));
 
-        UIFabrica.CriarBotao(telaMenu.transform, "BotaoJogar", "JOGAR", COR_JOGAR,
+        // CONTINUAR: aparece apenas quando o menu foi aberto no MEIO de um
+        // jogo (pausa) — retoma exatamente de onde parou
+        var continuar = UIFabrica.CriarBotao(telaMenu.transform, "BotaoContinuar",
+            "CONTINUAR", new Color(0.10f, 0.78f, 0.55f, 1f),
+            new Vector2(0, 195), new Vector2(560, 130), 52f, controlador, Continuar);
+        botaoContinuar = continuar.gameObject;
+        botaoContinuar.SetActive(false);
+
+        var jogar = UIFabrica.CriarBotao(telaMenu.transform, "BotaoJogar", "JOGAR", COR_JOGAR,
             new Vector2(0, 60),   new Vector2(560, 130), 56f, controlador, Jogar);
+        rotuloJogar = jogar.transform.Find("Rotulo").GetComponent<TextMeshProUGUI>();
         UIFabrica.CriarBotao(telaMenu.transform, "BotaoTreinar", "TREINAMENTO", COR_TREINAR,
             new Vector2(0, -110), new Vector2(560, 130), 52f, controlador, PedirSenha);
         UIFabrica.CriarBotao(telaMenu.transform, "BotaoSair", "SAIR", COR_SAIR,
@@ -224,6 +235,7 @@ public class MenuPrincipal : MonoBehaviour
             "Faça o sinal e pressione a tecla da letra\n" +
             "para gravar (grave várias vezes!)\n" +
             "H J K W X Z Ç gravam o MOVIMENTO por 1,3s\n" +
+            "(o Ç grava pela tecla Ç do teclado)\n" +
             "Shift + tecla apaga a letra",
             36f, new Color(0.15f, 0.15f, 0.22f, 1f), new Vector2(0, 80), new Vector2(940, 290), false);
 
@@ -334,6 +346,19 @@ public class MenuPrincipal : MonoBehaviour
 
     // ── Ações dos botões ─────────────────────────────────────────────────────
 
+    // Retoma o jogo pausado exatamente de onde parou
+    void Continuar()
+    {
+        GerenciadorDeAudio.TocarClique();
+        FecharMenu();
+        controlador.MODO_TREINAMENTO = false;
+        dicaTreinamento.SetActive(false);
+        if (painelPalavra   != null) painelPalavra.SetActive(true);
+        if (botaoPular      != null) botaoPular.SetActive(true);
+        if (botaoPularLetra != null) botaoPularLetra.SetActive(true);
+        gerenciador.Retomar();
+    }
+
     void Jogar()
     {
         GerenciadorDeAudio.TocarClique();
@@ -379,7 +404,15 @@ public class MenuPrincipal : MonoBehaviour
         menuAberto     = true;
         timerFimDeJogo = 0f;
 
-        gerenciador.PararJogo();
+        // Jogo em andamento? PAUSA (não perde pontos/fase/vidas).
+        // Fora isso (fim de jogo, treinamento, início), para de verdade.
+        bool podeContinuar = gerenciador != null &&
+                             gerenciador.JogoIniciado && !gerenciador.JogoTerminado;
+        if (podeContinuar) gerenciador.Pausar();
+        else               gerenciador.PararJogo();
+        if (botaoContinuar != null) botaoContinuar.SetActive(podeContinuar);
+        if (rotuloJogar    != null) rotuloJogar.text = podeContinuar ? "RECOMEÇAR" : "JOGAR";
+
         controlador.MODO_TREINAMENTO = false;
 
         telaMenu.SetActive(true);

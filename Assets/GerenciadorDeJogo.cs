@@ -72,6 +72,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     public System.Action         OnLetraCorreta;  // flash verde (feedback visual)
     public System.Action         OnVidaPerdida;   // flash vermelho
     public System.Action         OnVidaGanha;     // animação "+1 ❤" na tela
+    public System.Action         OnSemSaldo;      // tremida vermelha na pontuação
 
     // ── Estado interno ───────────────────────────────────────────────────────
     private List<ItemDePalavra> listaEmbaralhada;
@@ -103,6 +104,12 @@ public class GerenciadorDeJogo : MonoBehaviour
     public bool JogoIniciado  { get; private set; }
     public bool JogoTerminado => JogoIniciado && !aguardandoCelebracao && fimDeJogo;
 
+    // Pausa (menu aberto no meio do jogo): congela tempo e reconhecimento
+    // SEM perder pontos, vidas nem a fase
+    public bool Pausado { get; private set; }
+    public void Pausar()  { if (JogoIniciado && !JogoTerminado) Pausado = true; }
+    public void Retomar() { Pausado = false; }
+
     // A letra que o jogador precisa fazer AGORA ("" fora do jogo).
     // O ControladorCamera usa isto para saber se espera um sinal parado
     // ou um MOVIMENTO (letras dinâmicas).
@@ -110,6 +117,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     {
         get
         {
+            if (Pausado) return ""; // pausado = reconhecimento dorme
             string p = PalavraAtual;
             return (p.Length > 0 && indiceLetra < p.Length) ? p[indiceLetra].ToString() : "";
         }
@@ -127,7 +135,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     // ── Relógio da palavra ───────────────────────────────────────────────────
     void Update()
     {
-        if (!JogoIniciado || fimDeJogo || aguardandoCelebracao) return;
+        if (!JogoIniciado || Pausado || fimDeJogo || aguardandoCelebracao) return;
         if (string.IsNullOrEmpty(PalavraAtual)) return;
 
         tempoRestante -= Time.deltaTime;
@@ -150,6 +158,7 @@ public class GerenciadorDeJogo : MonoBehaviour
         proximaVidaEm = pontosPorVidaExtra;
         fimDeJogo     = false;
         Venceu        = false;
+        Pausado       = false;
         aguardandoCelebracao = false;
         JogoIniciado  = true;
 
@@ -163,6 +172,7 @@ public class GerenciadorDeJogo : MonoBehaviour
         StopAllCoroutines();
         aguardandoCelebracao = false;
         JogoIniciado = false;
+        Pausado = false;
         if (objetoAtual != null) Destroy(objetoAtual);
     }
 
@@ -367,7 +377,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     // ── Tentativa de letra (chamado pelo ControladorCamera) ──────────────────
     public bool TentarLetra(string letraFeita)
     {
-        if (!JogoIniciado || fimDeJogo || aguardandoCelebracao) return false;
+        if (!JogoIniciado || Pausado || fimDeJogo || aguardandoCelebracao) return false;
         string palavra = PalavraAtual;
         if (string.IsNullOrEmpty(palavra)) return false;
 
@@ -445,10 +455,11 @@ public class GerenciadorDeJogo : MonoBehaviour
     // Pula a palavra inteira (custa pontos)
     public void PularPalavra()
     {
-        if (!JogoIniciado || fimDeJogo || aguardandoCelebracao) return;
+        if (!JogoIniciado || Pausado || fimDeJogo || aguardandoCelebracao) return;
         if (pontuacao < custoPularPalavra)
         {
             GerenciadorDeAudio.TocarErro();
+            OnSemSaldo?.Invoke(); // feedback VISUAL também (público surdo!)
             Debug.Log("Pontos insuficientes para pular a palavra (" + custoPularPalavra + ")");
             return;
         }
@@ -464,11 +475,12 @@ public class GerenciadorDeJogo : MonoBehaviour
     // Avança para a próxima letra (custa pontos)
     public void PularLetra()
     {
-        if (!JogoIniciado || fimDeJogo || aguardandoCelebracao) return;
+        if (!JogoIniciado || Pausado || fimDeJogo || aguardandoCelebracao) return;
         if (string.IsNullOrEmpty(PalavraAtual)) return;
         if (pontuacao < custoPularLetra)
         {
             GerenciadorDeAudio.TocarErro();
+            OnSemSaldo?.Invoke(); // feedback VISUAL também (público surdo!)
             Debug.Log("Pontos insuficientes para pular a letra (" + custoPularLetra + ")");
             return;
         }
@@ -491,7 +503,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     // Volta uma letra (de graça)
     public void VoltarLetra()
     {
-        if (!JogoIniciado || fimDeJogo || aguardandoCelebracao) return;
+        if (!JogoIniciado || Pausado || fimDeJogo || aguardandoCelebracao) return;
         if (indiceLetra > 0)
         {
             GerenciadorDeAudio.TocarClique();

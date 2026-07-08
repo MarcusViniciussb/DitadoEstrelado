@@ -162,6 +162,8 @@ public class UIControle : MonoBehaviour
         gerenciador.OnLetraCorreta        -= FlashVerde;
         gerenciador.OnVidaPerdida         -= FlashVermelho;
         gerenciador.OnVidaGanha           -= AnimarVidaExtra;
+        gerenciador.OnSemSaldo            -= AvisarSemSaldo;
+        tremendoSaldo = false;
         inscrito = false;
     }
 
@@ -176,7 +178,44 @@ public class UIControle : MonoBehaviour
         gerenciador.OnLetraCorreta        += FlashVerde;
         gerenciador.OnVidaPerdida         += FlashVermelho;
         gerenciador.OnVidaGanha           += AnimarVidaExtra;
+        gerenciador.OnSemSaldo            += AvisarSemSaldo;
         inscrito = true;
+    }
+
+    // Sem pontos para pular: o chip de pontos TREME e pisca vermelho
+    // (feedback visual — o som de erro sozinho não serve ao público surdo)
+    private bool tremendoSaldo = false;
+
+    void AvisarSemSaldo()
+    {
+        if (!tremendoSaldo) StartCoroutine(RotinaSemSaldo());
+    }
+
+    IEnumerator RotinaSemSaldo()
+    {
+        if (chipScore == null) yield break;
+        tremendoSaldo = true;
+
+        var imagem      = chipScore.GetComponent<Image>();
+        var rt          = (RectTransform)chipScore.transform;
+        Color   corOriginal = imagem.color;
+        Vector2 posOriginal = rt.anchoredPosition;
+        Color   vermelho    = new Color(0.85f, 0.15f, 0.15f, 0.9f);
+
+        float duracao = 0.5f;
+        for (float t = 0f; t < duracao; t += Time.deltaTime)
+        {
+            float p = t / duracao;
+            imagem.color = Color.Lerp(vermelho, corOriginal, p);
+            // tremida horizontal que vai se acalmando
+            rt.anchoredPosition = posOriginal +
+                new Vector2(Mathf.Sin(p * 45f) * 12f * (1f - p), 0f);
+            yield return null;
+        }
+
+        imagem.color        = corOriginal;
+        rt.anchoredPosition = posOriginal;
+        tremendoSaldo       = false;
     }
 
     // "+1 ❤": um coração com "+1" sobe perto do chip de vidas, e o coração
