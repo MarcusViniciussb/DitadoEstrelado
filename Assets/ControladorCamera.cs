@@ -33,7 +33,9 @@ public class ControladorCamera : MonoBehaviour
     // (muito melhor). Senão, cai automaticamente no rastreador interno.
     public RastreadorExterno rastreadorExterno;
     public bool  iniciarRastreadorAutomaticamente = true; // Unity abre o Python sozinho!
-    public float esperaRastreadorExterno = 12f; // segundos aguardando o Python iniciar
+    // Tempo máximo aguardando o Python carregar (a 1ª vez pode ser lenta:
+    // antivírus + carga do MediaPipe). Enquanto o processo estiver vivo, espera.
+    public float esperaRastreadorExterno = 45f;
     private bool usandoExterno = false;
     private Processo processoRastreador; // guardamos para fechar junto com o jogo
 
@@ -151,8 +153,11 @@ public class ControladorCamera : MonoBehaviour
             yield break;
         }
 
-        float limite = Time.time + esperaRastreadorExterno;
-        while (Time.time < limite)
+        float inicioEspera   = Time.time;
+        float proximoRelato  = Time.time + 4f;
+        bool  morreu         = false;
+
+        while (Time.time - inicioEspera < esperaRastreadorExterno)
         {
             if (rastreadorExterno.Ativo)
             {
@@ -162,19 +167,36 @@ public class ControladorCamera : MonoBehaviour
             }
 
             // O Python abriu e morreu? Mostra o erro DELE no Console e desiste já
-            bool morreu = false;
             try { morreu = processoRastreador.HasExited; } catch { morreu = true; }
             if (morreu)
             {
-                string logs;
-                lock (logsDoRastreador) logs = logsDoRastreador.ToString();
-                Debug.LogWarning("O rastreador Python fechou sozinho. Mensagens dele:\n" + logs);
+                string logsErro;
+                lock (logsDoRastreador) logsErro = logsDoRastreador.ToString();
+                Debug.LogWarning("O rastreador Python fechou sozinho. Mensagens dele:\n" + logsErro);
                 break;
             }
+
+            // Mostra o progresso do carregamento (1ª vez pode demorar bastante)
+            if (Time.time >= proximoRelato)
+            {
+                proximoRelato = Time.time + 4f;
+                string ultimaLinha = "";
+                lock (logsDoRastreador)
+                {
+                    string tudo = logsDoRastreador.ToString().TrimEnd();
+                    int quebra = tudo.LastIndexOf('\n');
+                    ultimaLinha = (quebra >= 0) ? tudo.Substring(quebra + 1) : tudo;
+                }
+                Debug.Log("Aguardando o MediaPipe carregar... (" +
+                          Mathf.RoundToInt(Time.time - inicioEspera) + "s) " +
+                          (ultimaLinha.Length > 0 ? "| Python: " + ultimaLinha : ""));
+            }
+
             yield return null;
         }
 
-        Debug.Log("Rastreador externo nao respondeu — usando o rastreador interno.");
+        if (!morreu)
+            Debug.Log("Rastreador externo nao respondeu a tempo — usando o rastreador interno.");
         EncerrarProcessoDoRastreador(); // não deixa processo órfão segurando a câmera
         IniciarCameraInterna();
     }
