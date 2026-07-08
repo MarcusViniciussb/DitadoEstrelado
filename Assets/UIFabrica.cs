@@ -10,6 +10,8 @@ public static class UIFabrica
 {
     static Sprite spriteArredondado;
     static Sprite spriteCirculo;
+    static Sprite spriteCoracao;
+    static Sprite spriteAltoFalante;
 
     // ── Sprites gerados por código ───────────────────────────────────────────
 
@@ -56,6 +58,62 @@ public static class UIFabrica
 
         spriteCirculo = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
         return spriteCirculo;
+    }
+
+    // Coração (usado para as vidas) — curva implícita clássica do coração
+    public static Sprite Coracao()
+    {
+        if (spriteCoracao != null) return spriteCoracao;
+
+        int t = 64;
+        var tex = new Texture2D(t, t, TextureFormat.ARGB32, false);
+        for (int py = 0; py < t; py++)
+        for (int px = 0; px < t; px++)
+        {
+            // Converte o pixel para coordenadas -1.4..1.4 (coração cabe nisso)
+            float x = (px - t / 2f) / (t * 0.36f);
+            float y = (py - t / 2f) / (t * 0.36f) + 0.25f;
+            // Equação do coração: (x² + y² - 1)³ - x²·y³ < 0 → dentro
+            float f = Mathf.Pow(x * x + y * y - 1f, 3f) - x * x * y * y * y;
+            tex.SetPixel(px, py, new Color(1, 1, 1, f < 0f ? 1f : 0f));
+        }
+        tex.Apply();
+        spriteCoracao = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
+        return spriteCoracao;
+    }
+
+    // Alto-falante com ondas de som (ícone do botão de música)
+    public static Sprite AltoFalante()
+    {
+        if (spriteAltoFalante != null) return spriteAltoFalante;
+
+        int t = 64;
+        var tex = new Texture2D(t, t, TextureFormat.ARGB32, false);
+        for (int y = 0; y < t; y++)
+        for (int x = 0; x < t; x++)
+        {
+            bool dentro = false;
+
+            // Caixinha do alto-falante
+            if (x >= 8 && x <= 22 && y >= 24 && y <= 40) dentro = true;
+
+            // Cone (triângulo abrindo para a direita)
+            if (x > 22 && x <= 36)
+            {
+                float meiaAltura = 8f + (x - 22f) * 0.9f;
+                if (Mathf.Abs(y - 32f) <= meiaAltura) dentro = true;
+            }
+
+            // Duas ondas de som (arcos à direita do cone)
+            float dist = Mathf.Sqrt((x - 34f) * (x - 34f) + (y - 32f) * (y - 32f));
+            if (x >= 42 && (Mathf.Abs(dist - 12f) <= 1.8f || Mathf.Abs(dist - 18f) <= 1.8f))
+                dentro = true;
+
+            tex.SetPixel(x, y, new Color(1, 1, 1, dentro ? 1f : 0f));
+        }
+        tex.Apply();
+        spriteAltoFalante = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
+        return spriteAltoFalante;
     }
 
     // Gradiente vertical (usado como fundo do menu)

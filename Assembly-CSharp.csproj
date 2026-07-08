@@ -63,6 +63,7 @@
     <Compile Include="Assets\RastreadorExterno.cs" />
     <Compile Include="Assets\GerenciadorDeJogo.cs" />
     <Compile Include="Assets\HoverButton.cs" />
+    <Compile Include="Assets\Flutuar.cs" />
     <Compile Include="Assets\ReconhecedorLibras.cs" />
     <Compile Include="Assets\AlfabetoData.cs" />
     <Compile Include="Assets\ControladorCamera.cs" />

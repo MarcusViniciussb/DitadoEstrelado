@@ -15,6 +15,7 @@ public class GerenciadorDeAudio : MonoBehaviour
     AudioClip somClique;
     AudioClip somAcerto;
     AudioClip somVitoria;
+    AudioClip somErro;
 
     // Várias músicas tocando em rodízio (uma termina, entra a próxima)
     readonly System.Collections.Generic.List<AudioClip> musicas =
@@ -51,6 +52,7 @@ public class GerenciadorDeAudio : MonoBehaviour
         somClique  = ClipDeNotas(new[] { 880f },                            0.07f, 0.05f);
         somAcerto  = ClipDeNotas(new[] { 523.25f, 783.99f },                0.09f, 0.18f);
         somVitoria = ClipDeNotas(new[] { 523.25f, 659.25f, 783.99f, 1046.5f }, 0.12f, 0.4f);
+        somErro    = ClipDeNotas(new[] { 196f, 130.81f },                   0.16f, 0.2f); // descendo = "ops!"
 
         GerarMusicas();
         fonteMusica.volume = volumeMusica;
@@ -74,6 +76,7 @@ public class GerenciadorDeAudio : MonoBehaviour
     public static void TocarClique()  { var g = Obter(); g.fonteSfx.PlayOneShot(g.somClique,  g.volumeSfx); }
     public static void TocarAcerto()  { var g = Obter(); g.fonteSfx.PlayOneShot(g.somAcerto,  g.volumeSfx); }
     public static void TocarVitoria() { var g = Obter(); g.fonteSfx.PlayOneShot(g.somVitoria, g.volumeSfx); }
+    public static void TocarErro()    { var g = Obter(); g.fonteSfx.PlayOneShot(g.somErro,    g.volumeSfx); }
 
     public static bool MusicaLigada => Obter().musicaLigada;
 
@@ -179,6 +182,28 @@ public class GerenciadorDeAudio : MonoBehaviour
             440f, 0, 0, 392f,    0, 0, 0,    0,
         },
         new[] { 110f, 98f, 110f, 130.81f }));
+
+        // Faixa 4: BEM animada! Andamento rápido, melodia saltitante
+        musicas.Add(RenderizarMusica(0.17f, new[]
+        {
+            523.25f, 523.25f, 0, 659.25f, 0, 523.25f, 783.99f, 0,
+            659.25f, 0, 523.25f, 0, 440f, 440f, 523.25f, 0,
+            587.33f, 587.33f, 0, 659.25f, 0, 587.33f, 523.25f, 0,
+            440f, 0, 392f, 0, 440f, 523.25f, 0, 0,
+            659.25f, 659.25f, 0, 783.99f, 0, 659.25f, 1046.5f, 0,
+            783.99f, 0, 659.25f, 0, 587.33f, 523.25f, 0, 0,
+        },
+        new[] { 130.81f, 130.81f, 98f, 110f, 130.81f, 98f }));
+
+        // Faixa 5: festiva, com saltos de oitava (energia de festa junina!)
+        musicas.Add(RenderizarMusica(0.2f, new[]
+        {
+            261.63f, 523.25f, 261.63f, 523.25f, 329.63f, 659.25f, 0, 0,
+            293.66f, 587.33f, 293.66f, 587.33f, 392f, 783.99f, 0, 0,
+            440f, 523.25f, 587.33f, 659.25f, 587.33f, 523.25f, 440f, 0,
+            392f, 440f, 392f, 329.63f, 261.63f, 0, 261.63f, 0,
+        },
+        new[] { 130.81f, 110f, 98f, 130.81f }));
     }
 
     // Transforma um padrão de notas + baixo num clipe de áudio

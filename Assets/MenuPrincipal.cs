@@ -36,6 +36,7 @@ public class MenuPrincipal : MonoBehaviour
 
     GameObject botaoSom;           // liga/desliga a música (sempre visível)
     GameObject riscoSom;           // risco vermelho = música desligada
+    GameObject botaoPularLetra;    // "PULAR LETRA -5" (aparece junto do outro)
 
     GameObject painelSenha;        // teclado numérico da área do professor
     TextMeshProUGUI displaySenha;
@@ -149,19 +150,32 @@ public class MenuPrincipal : MonoBehaviour
         botaoMenuHud = botao.gameObject;
 
         // Botão de SOM logo abaixo do MENU — visível SEMPRE (menu e jogo)
-        var som = UIFabrica.CriarBotao(transform, "BotaoSom", "SOM", COR_HUD,
-            new Vector2(-30, -135), new Vector2(220, 90), 38f, controlador, AlternarSom);
+        var som = UIFabrica.CriarBotao(transform, "BotaoSom", "", COR_HUD,
+            new Vector2(-30, -135), new Vector2(150, 90), 38f, controlador, AlternarSom);
         UIFabrica.Ancorar(som, new Vector2(1f, 1f), new Vector2(1f, 1f));
         botaoSom = som.gameObject;
 
+        // Ícone de alto-falante desenhado por código (na estética do jogo)
+        var iconeSom = UIFabrica.CriarImagem(som.transform, "Icone",
+            Color.white, Vector2.zero, new Vector2(58, 58), UIFabrica.AltoFalante());
+        iconeSom.raycastTarget = false;
+
         // Risco vermelho na diagonal = música desligada
         var risco = UIFabrica.CriarImagem(som.transform, "Risco",
-            new Color(0.9f, 0.2f, 0.2f, 0.95f), Vector2.zero, new Vector2(200, 10),
+            new Color(0.9f, 0.2f, 0.2f, 0.95f), Vector2.zero, new Vector2(120, 10),
             UIFabrica.Arredondado(), true);
         risco.rectTransform.localEulerAngles = new Vector3(0, 0, 20f);
         risco.raycastTarget = false;
         riscoSom = risco.gameObject;
         riscoSom.SetActive(false);
+
+        // Botão PULAR LETRA (o PULAR PALAVRA já existe na cena, à direita)
+        var pularLetra = UIFabrica.CriarBotao(transform, "BotaoPularLetra",
+            "PULAR LETRA  -5", new Color(0.55f, 0.4f, 0.85f, 1f),
+            new Vector2(-250, 240), new Vector2(460, 110), 34f, controlador,
+            () => gerenciador.PularLetra());
+        UIFabrica.Ancorar(pularLetra, new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f));
+        botaoPularLetra = pularLetra.gameObject;
 
         // Cartão de instruções do modo treinamento
         var painel = UIFabrica.CriarImagem(transform, "DicaTreinamento",
@@ -289,8 +303,9 @@ public class MenuPrincipal : MonoBehaviour
         FecharMenu();
         controlador.MODO_TREINAMENTO = false;
         dicaTreinamento.SetActive(false);
-        if (painelPalavra != null) painelPalavra.SetActive(true);
-        if (botaoPular    != null) botaoPular.SetActive(true);
+        if (painelPalavra    != null) painelPalavra.SetActive(true);
+        if (botaoPular       != null) botaoPular.SetActive(true);
+        if (botaoPularLetra  != null) botaoPularLetra.SetActive(true);
         gerenciador.IniciarJogo();
     }
 
@@ -300,8 +315,9 @@ public class MenuPrincipal : MonoBehaviour
         FecharMenu();
         controlador.MODO_TREINAMENTO = true;
         gerenciador.PararJogo();
-        if (painelPalavra != null) painelPalavra.SetActive(false);
-        if (botaoPular    != null) botaoPular.SetActive(false);
+        if (painelPalavra   != null) painelPalavra.SetActive(false);
+        if (botaoPular      != null) botaoPular.SetActive(false);
+        if (botaoPularLetra != null) botaoPularLetra.SetActive(false);
         dicaTreinamento.SetActive(true);
     }
 
@@ -335,8 +351,9 @@ public class MenuPrincipal : MonoBehaviour
         if (botaoSom    != null) botaoSom.transform.SetAsLastSibling(); // som clicável até no menu
         botaoMenuHud.SetActive(false);
         dicaTreinamento.SetActive(false);
-        if (painelPalavra != null) painelPalavra.SetActive(false);
-        if (botaoPular    != null) botaoPular.SetActive(false);
+        if (painelPalavra   != null) painelPalavra.SetActive(false);
+        if (botaoPular      != null) botaoPular.SetActive(false);
+        if (botaoPularLetra != null) botaoPularLetra.SetActive(false);
     }
 
     void FecharMenu()

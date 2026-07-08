@@ -26,6 +26,16 @@ public class UIControle : MonoBehaviour
     private TextMeshProUGUI letraSinal;
     private static readonly Color COR_BARRA_INICIO = new Color(0.2f, 0.8f, 1f,   0.9f);
     private static readonly Color COR_BARRA_FIM    = new Color(0.1f, 0.85f, 0.3f, 1f);
+
+    // Vidas (corações) e relógio da palavra
+    private GameObject chipVidas;
+    private readonly System.Collections.Generic.List<GameObject> coracoes =
+        new System.Collections.Generic.List<GameObject>();
+    private GameObject      chipTempo;
+    private TextMeshProUGUI textoTempo;
+    private static readonly Color COR_VIDA        = new Color(0.95f, 0.25f, 0.35f, 1f);
+    private static readonly Color COR_TEMPO_OK    = Color.white;
+    private static readonly Color COR_TEMPO_FIM   = new Color(1f, 0.35f, 0.25f, 1f);
     private string palavraAnterior = null;
     private int    indiceAnterior  = -1;
     private bool   celebrando      = false;
@@ -88,6 +98,34 @@ public class UIControle : MonoBehaviour
 
         barraSinal = fundoBarra.gameObject;
         barraSinal.SetActive(false);
+
+        var raizCanvas = GetComponentInParent<Canvas>().transform;
+
+        // Chip de VIDAS (corações), abaixo da pontuação
+        var vidasChip = UIFabrica.CriarImagem(raizCanvas, "ChipVidas",
+            new Color(0.08f, 0.10f, 0.30f, 0.75f), new Vector2(30, -135),
+            new Vector2(330, 80), UIFabrica.Arredondado(), true);
+        UIFabrica.Ancorar(vidasChip, new Vector2(0f, 1f), new Vector2(0f, 1f));
+        for (int i = 0; i < 5; i++) // 5 = máximo de vidas
+        {
+            var coracao = UIFabrica.CriarImagem(vidasChip.transform, "Coracao" + i,
+                COR_VIDA, new Vector2(-110 + i * 55, 0), new Vector2(46, 46),
+                UIFabrica.Coracao());
+            coracao.raycastTarget = false;
+            coracoes.Add(coracao.gameObject);
+        }
+        chipVidas = vidasChip.gameObject;
+        chipVidas.SetActive(false);
+
+        // Relógio da palavra, no topo central
+        var tempoChip = UIFabrica.CriarImagem(raizCanvas, "ChipTempo",
+            new Color(0.08f, 0.10f, 0.30f, 0.75f), new Vector2(0, -30),
+            new Vector2(170, 90), UIFabrica.Arredondado(), true);
+        UIFabrica.Ancorar(tempoChip, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+        textoTempo = UIFabrica.CriarTexto(tempoChip.transform, "Texto", "0",
+            48f, COR_TEMPO_OK, Vector2.zero, new Vector2(160, 90));
+        chipTempo = tempoChip.gameObject;
+        chipTempo.SetActive(false);
     }
 
     // OnEnable/OnDisable: o painel é ligado/desligado pelo MenuPrincipal,
@@ -98,9 +136,17 @@ public class UIControle : MonoBehaviour
     void OnDisable()
     {
         celebrando = false; // corrotina morre junto com o objeto desativado
+
+        // Painel desativado (menu aberto): esconde os chips também
+        if (chipScore != null) chipScore.SetActive(false);
+        if (chipVidas != null) chipVidas.SetActive(false);
+        if (chipTempo != null) chipTempo.SetActive(false);
+
         if (!inscrito || gerenciador == null) return;
         gerenciador.OnPalavraCompleta     -= IniciarCelebracao;
         gerenciador.OnPontuacaoAtualizada -= AtualizarScore;
+        gerenciador.OnVidasAtualizadas    -= AtualizarVidas;
+        gerenciador.OnNovaFase            -= MostrarFase;
         inscrito = false;
     }
 
@@ -109,7 +155,37 @@ public class UIControle : MonoBehaviour
         if (inscrito || gerenciador == null) return;
         gerenciador.OnPalavraCompleta     += IniciarCelebracao;
         gerenciador.OnPontuacaoAtualizada += AtualizarScore;
+        gerenciador.OnVidasAtualizadas    += AtualizarVidas;
+        gerenciador.OnNovaFase            += MostrarFase;
         inscrito = true;
+    }
+
+    void AtualizarVidas(int vidas)
+    {
+        for (int i = 0; i < coracoes.Count; i++)
+            coracoes[i].SetActive(i < vidas);
+    }
+
+    void MostrarFase(string texto)
+    {
+        StartCoroutine(RotinaDeFase(texto));
+    }
+
+    IEnumerator RotinaDeFase(string texto)
+    {
+        celebrando = true;
+        rotulo.gameObject.SetActive(false);
+        if (barraSinal != null) barraSinal.SetActive(false);
+
+        tmp.color = new Color(0.15f, 0.4f, 0.85f, 1f); // azul de fase
+        tmp.text  = texto;
+        yield return new WaitForSeconds(2.2f);
+
+        tmp.color       = COR_NORMAL;
+        tmp.text        = "";
+        palavraAnterior = null;
+        indiceAnterior  = -1;
+        celebrando      = false;
     }
 
     void AtualizarScore(int score)
@@ -122,9 +198,20 @@ public class UIControle : MonoBehaviour
     {
         if (gerenciador == null || celebrando) return;
 
-        // Chip de pontos só aparece com o jogo rodando
-        if (chipScore != null && chipScore.activeSelf != gerenciador.JogoIniciado)
-            chipScore.SetActive(gerenciador.JogoIniciado);
+        // Chips (pontos, vidas, tempo) só aparecem com o jogo rodando
+        bool rodando = gerenciador.JogoIniciado;
+        bool jogando = rodando && !gerenciador.JogoTerminado;
+        if (chipScore != null && chipScore.activeSelf != rodando) chipScore.SetActive(rodando);
+        if (chipVidas != null && chipVidas.activeSelf != rodando) chipVidas.SetActive(rodando);
+        if (chipTempo != null && chipTempo.activeSelf != jogando) chipTempo.SetActive(jogando);
+
+        // Relógio da palavra: fica vermelho nos últimos 5 segundos
+        if (jogando && textoTempo != null)
+        {
+            int segundos = Mathf.CeilToInt(gerenciador.TempoRestante);
+            textoTempo.text  = segundos.ToString();
+            textoTempo.color = (segundos <= 5) ? COR_TEMPO_FIM : COR_TEMPO_OK;
+        }
 
         // No menu / treinamento não há palavra para mostrar
         if (!gerenciador.JogoIniciado)
@@ -144,8 +231,16 @@ public class UIControle : MonoBehaviour
             {
                 rotulo.gameObject.SetActive(false);
                 barraSinal.SetActive(false);
-                tmp.color       = COR_PARABENS;
-                tmp.text        = "FIM DO JOGO!";
+                if (gerenciador.Venceu)
+                {
+                    tmp.color = COR_CELEBRACAO;
+                    tmp.text  = "VOCÊ VENCEU!";
+                }
+                else
+                {
+                    tmp.color = COR_PARABENS;
+                    tmp.text  = "FIM DE JOGO";
+                }
                 palavraAnterior = "FIM";
             }
             return;
@@ -170,9 +265,20 @@ public class UIControle : MonoBehaviour
     }
 
     // Mostra/atualiza a barrinha "reconhecendo o sinal X..."
+    // Quando a letra esperada é DINÂMICA, vira uma dica pulsante de movimento.
     void AtualizarBarraSinal()
     {
         if (barraSinal == null || controlador == null) return;
+
+        // Letra com movimento: barra pulsa como convite para mexer a mão
+        if (controlador.EsperandoMovimento)
+        {
+            if (!barraSinal.activeSelf) barraSinal.SetActive(true);
+            preenchimentoSinal.fillAmount = Mathf.PingPong(Time.time * 0.7f, 1f);
+            preenchimentoSinal.color      = COR_BARRA_INICIO;
+            letraSinal.text = "MOV";
+            return;
+        }
 
         string candidata = controlador.LetraCandidata;
         bool mostrar = !string.IsNullOrEmpty(candidata);

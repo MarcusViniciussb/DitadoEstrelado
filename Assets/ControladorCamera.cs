@@ -51,6 +51,7 @@ public class ControladorCamera : MonoBehaviour
     // Lidos pela interface para mostrar "estou quase reconhecendo a letra X"
     public string LetraCandidata      { get; private set; } = "";
     public float  ProgressoCandidata  { get; private set; } = 0f;
+    public bool   EsperandoMovimento  { get; private set; } = false; // letra atual é dinâmica
 
     [Header("Letras dinamicas (com movimento)")]
     public float duracaoGravacaoMovimento   = 1.3f;  // segundos gravados no treinamento
@@ -472,22 +473,34 @@ public class ControladorCamera : MonoBehaviour
                 return;
             }
 
-            // Letras com MOVIMENTO: compara os últimos ~1,4s de mão com os
-            // movimentos gravados (DTW). Roda algumas vezes por segundo.
-            if (Time.time - tempoUltimaChecagemMovimento >= intervaloChecagemMovimento)
+            // O sistema sabe qual letra o jogador precisa fazer AGORA.
+            // Se ela é DINÂMICA (H J K W X Z Ç), só o comparador de MOVIMENTO
+            // trabalha; se é estática, só o de "foto" — economiza processamento
+            // e um modo nunca atrapalha o outro.
+            string letraEsperada = gerenciador.LetraEsperada;
+            EsperandoMovimento = letraEsperada.Length > 0 &&
+                                 reconhecedor.EhLetraDinamica(letraEsperada);
+
+            if (EsperandoMovimento)
             {
-                tempoUltimaChecagemMovimento = Time.time;
-                string letraMovimento = reconhecedor.ClassificarSinalDinamico(janelaMovimento);
-                if (letraMovimento != "Desconhecido" && gerenciador.TentarLetra(letraMovimento))
+                letraCandidata     = "";
+                LetraCandidata     = "";
+                ProgressoCandidata = 0f;
+
+                if (Time.time - tempoUltimaChecagemMovimento >= intervaloChecagemMovimento)
                 {
-                    // (sem aprendizado automático aqui: letra de MOVIMENTO não
-                    //  deve virar amostra estática — poluiria o banco de fotos)
-                    tempoUltimoReconhecimento = Time.time;
-                    janelaMovimento.Clear();
-                    temposJanela.Clear();
-                    LimparCandidata();
-                    return;
+                    tempoUltimaChecagemMovimento = Time.time;
+                    string letraMovimento = reconhecedor.ClassificarSinalDinamico(janelaMovimento);
+                    if (letraMovimento == letraEsperada && gerenciador.TentarLetra(letraMovimento))
+                    {
+                        // (sem aprendizado automático aqui: letra de MOVIMENTO não
+                        //  deve virar amostra estática — poluiria o banco de fotos)
+                        tempoUltimoReconhecimento = Time.time;
+                        janelaMovimento.Clear();
+                        temposJanela.Clear();
+                    }
                 }
+                return;
             }
 
             string letraFeita = reconhecedor.ClassificarLetra(pontosDaMao);
@@ -538,6 +551,7 @@ public class ControladorCamera : MonoBehaviour
         letraCandidata     = "";
         LetraCandidata     = "";
         ProgressoCandidata = 0f;
+        EsperandoMovimento = false;
     }
 
     // Ajusta o pedaço visível do feed (uvRect) para preencher a tela SEM esticar:
