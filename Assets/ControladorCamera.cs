@@ -143,6 +143,14 @@ public class ControladorCamera : MonoBehaviour
         if (iniciarRastreadorAutomaticamente)
             IniciarProcessoDoRastreador();
 
+        // Nenhum processo foi aberto (Python ausente)? Não perde tempo esperando
+        if (processoRastreador == null)
+        {
+            Debug.Log("Usando o rastreador interno.");
+            IniciarCameraInterna();
+            yield break;
+        }
+
         float limite = Time.time + esperaRastreadorExterno;
         while (Time.time < limite)
         {
@@ -152,13 +160,27 @@ public class ControladorCamera : MonoBehaviour
                 Debug.Log("Rastreador EXTERNO conectado! (MediaPipe completo, com profundidade Z)");
                 yield break;
             }
+
+            // O Python abriu e morreu? Mostra o erro DELE no Console e desiste já
+            bool morreu = false;
+            try { morreu = processoRastreador.HasExited; } catch { morreu = true; }
+            if (morreu)
+            {
+                string logs;
+                lock (logsDoRastreador) logs = logsDoRastreador.ToString();
+                Debug.LogWarning("O rastreador Python fechou sozinho. Mensagens dele:\n" + logs);
+                break;
+            }
             yield return null;
         }
 
-        Debug.Log("Rastreador externo nao encontrado — usando o rastreador interno.");
+        Debug.Log("Rastreador externo nao respondeu — usando o rastreador interno.");
         EncerrarProcessoDoRastreador(); // não deixa processo órfão segurando a câmera
         IniciarCameraInterna();
     }
+
+    // Guarda as últimas linhas impressas pelo Python (para mostrar se ele falhar)
+    private System.Text.StringBuilder logsDoRastreador = new System.Text.StringBuilder();
 
     // Executa RastreadorPython/rastreador_maos.py sem abrir janela nenhuma
     void IniciarProcessoDoRastreador()
@@ -175,26 +197,80 @@ public class ControladorCamera : MonoBehaviour
             return;
         }
 
-        // Windows instala o Python como "py" ou "python" — tenta os dois
-        foreach (string executavel in new[] { "py", "python" })
+        foreach (string executavel in CandidatosAPython())
         {
             try
             {
                 var info = new InfoDeProcesso
                 {
-                    FileName         = executavel,
-                    Arguments        = "-u rastreador_maos.py",
-                    WorkingDirectory = pasta,
-                    UseShellExecute  = false,
-                    CreateNoWindow   = true, // invisível!
+                    FileName               = executavel,
+                    Arguments              = "-u rastreador_maos.py",
+                    WorkingDirectory       = pasta,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true, // invisível!
+                    RedirectStandardOutput = true, // capturamos o que ele imprime
+                    RedirectStandardError  = true,
                 };
                 processoRastreador = Processo.Start(info);
-                Debug.Log("Rastreador Python iniciado em segundo plano (" + executavel + ").");
+                processoRastreador.OutputDataReceived += (s, e) => GuardarLogDoRastreador(e.Data);
+                processoRastreador.ErrorDataReceived  += (s, e) => GuardarLogDoRastreador(e.Data);
+                processoRastreador.BeginOutputReadLine();
+                processoRastreador.BeginErrorReadLine();
+                Debug.Log("Rastreador Python iniciado em segundo plano: " + executavel);
                 return;
             }
-            catch { /* esse nome nao existe — tenta o proximo */ }
+            catch { /* esse executavel nao funcionou — tenta o proximo */ }
         }
-        Debug.LogWarning("Rastreador: Python nao encontrado no PC. Usando rastreador interno.");
+        Debug.LogWarning("Rastreador: Python nao encontrado no PC. " +
+                         "Abra EXECUTAR_RASTREADOR.bat manualmente ou instale o Python.");
+    }
+
+    // Lista de possíveis executáveis do Python, do mais confiável ao menos.
+    // IMPORTANTE: os atalhos "py"/"python" do PATH podem ser aliases especiais
+    // do Windows (WindowsApps) que FALHAM quando abertos pelo Unity — por isso
+    // procuramos primeiro o python.exe REAL nas pastas de instalação.
+    IEnumerable<string> CandidatosAPython()
+    {
+        string local = System.Environment.GetFolderPath(
+                           System.Environment.SpecialFolder.LocalApplicationData);
+
+        // 1) Gerenciador novo do Python (ex: AppData\Local\Python\pythoncore-3.14-64)
+        string pastaNova = System.IO.Path.Combine(local, "Python");
+        if (System.IO.Directory.Exists(pastaNova))
+            foreach (string dir in System.IO.Directory.GetDirectories(pastaNova, "pythoncore-*"))
+            {
+                string exe = System.IO.Path.Combine(dir, "python.exe");
+                if (System.IO.File.Exists(exe)) yield return exe;
+            }
+
+        // 2) Instalador clássico do python.org (AppData\Local\Programs\Python\Python3xx)
+        string pastaClassica = System.IO.Path.Combine(local, "Programs", "Python");
+        if (System.IO.Directory.Exists(pastaClassica))
+            foreach (string dir in System.IO.Directory.GetDirectories(pastaClassica, "Python3*"))
+            {
+                string exe = System.IO.Path.Combine(dir, "python.exe");
+                if (System.IO.File.Exists(exe)) yield return exe;
+            }
+
+        // 3) Launcher clássico em C:\Windows
+        string pyGlobal = @"C:\Windows\py.exe";
+        if (System.IO.File.Exists(pyGlobal)) yield return pyGlobal;
+
+        // 4) Por último, os nomes do PATH (podem ser os aliases problemáticos)
+        yield return "py";
+        yield return "python";
+    }
+
+    void GuardarLogDoRastreador(string linha)
+    {
+        if (string.IsNullOrEmpty(linha)) return;
+        lock (logsDoRastreador)
+        {
+            logsDoRastreador.AppendLine(linha);
+            // guarda só as últimas ~2000 letras
+            if (logsDoRastreador.Length > 2000)
+                logsDoRastreador.Remove(0, logsDoRastreador.Length - 2000);
+        }
     }
 
     void EncerrarProcessoDoRastreador()
