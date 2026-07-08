@@ -2,6 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using MediaPipe.HandLandmark;
 using System.Collections;
+// Apelidos para não confundir System.Diagnostics.Debug com UnityEngine.Debug
+using Processo       = System.Diagnostics.Process;
+using InfoDeProcesso = System.Diagnostics.ProcessStartInfo;
 
 // ControladorCamera: conecta a webcam ao detector de mão (HandLandmarkDetector)
 // e passa os 21 pontos da mão para o ReconhecedorLibras.
@@ -28,8 +31,10 @@ public class ControladorCamera : MonoBehaviour
     // Se o script RastreadorPython estiver rodando, usa o MediaPipe completo
     // (muito melhor). Senão, cai automaticamente no rastreador interno.
     public RastreadorExterno rastreadorExterno;
-    public float esperaRastreadorExterno = 3f; // segundos procurando o Python
+    public bool  iniciarRastreadorAutomaticamente = true; // Unity abre o Python sozinho!
+    public float esperaRastreadorExterno = 12f; // segundos aguardando o Python iniciar
     private bool usandoExterno = false;
+    private Processo processoRastreador; // guardamos para fechar junto com o jogo
 
     [Header("Reconhecimento")]
     public float cooldownReconhecimento = 0.9f; // segundos mínimos entre duas letras reconhecidas
@@ -101,11 +106,31 @@ public class ControladorCamera : MonoBehaviour
             IniciarCameraInterna();
     }
 
-    // Espera alguns segundos pelo rastreador Python; se não aparecer,
-    // liga o rastreador interno antigo (fallback automático)
+    // Fluxo de escolha da fonte de rastreamento:
+    // 1) Já tem um rastreador Python rodando (aberto na mão)? Usa ele.
+    // 2) Senão, o próprio Unity abre o Python invisível em segundo plano.
+    // 3) Se nada funcionar, liga o rastreador interno antigo (fallback).
     IEnumerator EscolherFonteDeRastreamento()
     {
         Debug.Log("Procurando rastreador externo (Python/MediaPipe)...");
+
+        // Alguém já abriu o rastreador manualmente?
+        float fimVerificacao = Time.time + 0.7f;
+        while (Time.time < fimVerificacao)
+        {
+            if (rastreadorExterno.Ativo)
+            {
+                usandoExterno = true;
+                Debug.Log("Rastreador EXTERNO ja estava rodando — conectado!");
+                yield break;
+            }
+            yield return null;
+        }
+
+        // Abre o Python sozinho (invisível); ele é fechado junto com o jogo
+        if (iniciarRastreadorAutomaticamente)
+            IniciarProcessoDoRastreador();
+
         float limite = Time.time + esperaRastreadorExterno;
         while (Time.time < limite)
         {
@@ -117,8 +142,54 @@ public class ControladorCamera : MonoBehaviour
             }
             yield return null;
         }
+
         Debug.Log("Rastreador externo nao encontrado — usando o rastreador interno.");
+        EncerrarProcessoDoRastreador(); // não deixa processo órfão segurando a câmera
         IniciarCameraInterna();
+    }
+
+    // Executa RastreadorPython/rastreador_maos.py sem abrir janela nenhuma
+    void IniciarProcessoDoRastreador()
+    {
+        // Pasta RastreadorPython: fica na raiz do projeto (no Editor) ou ao
+        // lado do executável (num build) — os dois casos são o pai de dataPath
+        string raiz   = System.IO.Directory.GetParent(Application.dataPath).FullName;
+        string pasta  = System.IO.Path.Combine(raiz, "RastreadorPython");
+        string script = System.IO.Path.Combine(pasta, "rastreador_maos.py");
+
+        if (!System.IO.File.Exists(script))
+        {
+            Debug.LogWarning("Rastreador: script nao encontrado em " + script);
+            return;
+        }
+
+        // Windows instala o Python como "py" ou "python" — tenta os dois
+        foreach (string executavel in new[] { "py", "python" })
+        {
+            try
+            {
+                var info = new InfoDeProcesso
+                {
+                    FileName         = executavel,
+                    Arguments        = "-u rastreador_maos.py",
+                    WorkingDirectory = pasta,
+                    UseShellExecute  = false,
+                    CreateNoWindow   = true, // invisível!
+                };
+                processoRastreador = Processo.Start(info);
+                Debug.Log("Rastreador Python iniciado em segundo plano (" + executavel + ").");
+                return;
+            }
+            catch { /* esse nome nao existe — tenta o proximo */ }
+        }
+        Debug.LogWarning("Rastreador: Python nao encontrado no PC. Usando rastreador interno.");
+    }
+
+    void EncerrarProcessoDoRastreador()
+    {
+        if (processoRastreador == null) return;
+        try { if (!processoRastreador.HasExited) processoRastreador.Kill(); } catch { }
+        processoRastreador = null;
     }
 
     void IniciarCameraInterna()
@@ -472,6 +543,7 @@ public class ControladorCamera : MonoBehaviour
 
     void OnDestroy()
     {
+        EncerrarProcessoDoRastreador(); // fecha o Python junto com o jogo
         detetive?.Dispose();
         if (texturaRecorte != null) texturaRecorte.Release();
         if (minhaCamera != null && minhaCamera.isPlaying)
