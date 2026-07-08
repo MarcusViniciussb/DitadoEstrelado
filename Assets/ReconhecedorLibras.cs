@@ -16,6 +16,17 @@ public class ReconhecedorLibras : MonoBehaviour
     [Range(1, 7)]   public int   vizinhosK      = 3;    // quantas amostras próximas votam
     [Range(0f, 3f)] public float pesoDosAngulos = 0.5f; // importância dos ângulos vs posições
 
+    [Header("Letras dinamicas (gravadas como MOVIMENTO, nao como foto)")]
+    public string[] letrasDinamicas = { "H", "J", "K", "X", "Z" };
+    public float toleranciaDinamica = 4.5f; // mesmo esquema: sobe = aceita mais facil
+
+    public bool EhLetraDinamica(string letra)
+    {
+        foreach (var l in letrasDinamicas)
+            if (l == letra) return true;
+        return false;
+    }
+
     // ── Ângulos das articulações ─────────────────────────────────────────────
     // Cada trio (a, b, c) mede o ângulo NO ponto b entre os vetores (a-b) e (c-b).
     // Ângulo não muda quando a mão gira ou muda de tamanho → complementa as posições.
@@ -92,6 +103,13 @@ public class ReconhecedorLibras : MonoBehaviour
         var contagem = new SortedDictionary<string, int>();
         foreach (var l in bancoDeDados.letrasGravadas)
             contagem[l.nome] = contagem.ContainsKey(l.nome) ? contagem[l.nome] + 1 : 1;
+
+        // Letras dinâmicas ganham um * para diferenciar (ex: "H*: 3")
+        foreach (var s in bancoDeDados.sinaisDinamicos)
+        {
+            string chave = s.nome + "*";
+            contagem[chave] = contagem.ContainsKey(chave) ? contagem[chave] + 1 : 1;
+        }
 
         var sb = new System.Text.StringBuilder();
         foreach (var par in contagem)
@@ -182,6 +200,42 @@ public class ReconhecedorLibras : MonoBehaviour
             Debug.Log("Aprendizado [" + nomeDaLetra + "]: " + (total + 1) + " amostras.");
     }
 
+    // Grava um MOVIMENTO completo (sequência de quadros) para letra dinâmica
+    public void GravarSinalDinamico(string nome, List<Vector3[]> quadrosAbsolutos)
+    {
+        if (bancoDeDados == null) return;
+
+#if UNITY_EDITOR
+        Undo.RecordObject(bancoDeDados, "Gravar Sinal Dinamico");
+#endif
+
+        var sinal = new AlfabetoData.SinalDinamico
+        {
+            nome    = nome,
+            quadros = new List<AlfabetoData.QuadroDeMao>()
+        };
+        foreach (var absoluto in quadrosAbsolutos)
+        {
+            // Cada quadro fica relativo ao pulso (igual às letras estáticas)
+            var relativo = new Vector3[21];
+            Vector3 pulso = absoluto[0];
+            for (int i = 0; i < 21; i++) relativo[i] = absoluto[i] - pulso;
+            sinal.quadros.Add(new AlfabetoData.QuadroDeMao { pontos = relativo });
+        }
+        bancoDeDados.sinaisDinamicos.Add(sinal);
+
+        int total = 0;
+        foreach (var s in bancoDeDados.sinaisDinamicos)
+            if (s.nome == nome) total++;
+
+#if UNITY_EDITOR
+        EditorUtility.SetDirty(bancoDeDados);
+        AssetDatabase.SaveAssets();
+#endif
+        Debug.Log("Movimento [" + nome + "] gravado com " + sinal.quadros.Count +
+                  " quadros! Amostras deste movimento: " + total);
+    }
+
     // Apaga TODAS as amostras de uma letra (use Shift+Tecla no treinamento)
     public void ApagarLetra(string nomeDaLetra)
     {
@@ -192,6 +246,7 @@ public class ReconhecedorLibras : MonoBehaviour
 #endif
 
         int removidos = bancoDeDados.letrasGravadas.RemoveAll(l => l.nome == nomeDaLetra);
+        removidos += bancoDeDados.sinaisDinamicos.RemoveAll(s => s.nome == nomeDaLetra);
 
 #if UNITY_EDITOR
         EditorUtility.SetDirty(bancoDeDados);
@@ -262,5 +317,87 @@ public class ReconhecedorLibras : MonoBehaviour
         }
 
         return (menorDistancia < toleranciaDeErro) ? vencedora : "Desconhecido";
+    }
+
+    // ── Letras dinâmicas: comparação de MOVIMENTOS via DTW ───────────────────
+
+    private float tempoUltimoDebugDinamico = 0f;
+
+    // Compara a janela de movimento atual com os movimentos gravados.
+    // Retorna a letra vencedora ou "Desconhecido".
+    public string ClassificarSinalDinamico(List<Vector3[]> janelaAbsoluta)
+    {
+        if (bancoDeDados == null || bancoDeDados.sinaisDinamicos == null ||
+            bancoDeDados.sinaisDinamicos.Count == 0 ||
+            janelaAbsoluta == null || janelaAbsoluta.Count < 6)
+            return "Desconhecido";
+
+        // Normaliza a janela atual uma única vez (pulso + tamanho da mão)
+        var janela = new List<Vector3[]>(janelaAbsoluta.Count);
+        foreach (var absoluto in janelaAbsoluta)
+        {
+            var relativo = new Vector3[21];
+            Vector3 pulso = absoluto[0];
+            for (int i = 0; i < 21; i++) relativo[i] = absoluto[i] - pulso;
+            janela.Add(NormalizarEscala(relativo));
+        }
+
+        string melhor = "Desconhecido";
+        float  menor  = float.MaxValue;
+
+        foreach (var sinal in bancoDeDados.sinaisDinamicos)
+        {
+            var amostra = new List<Vector3[]>(sinal.quadros.Count);
+            foreach (var quadro in sinal.quadros)
+                amostra.Add(NormalizarEscala(quadro.pontos));
+
+            float custo = CustoDTW(janela, amostra);
+            if (custo < menor)
+            {
+                menor  = custo;
+                melhor = sinal.nome;
+            }
+        }
+
+        if (mostrarDebug && menor < float.MaxValue &&
+            Time.time - tempoUltimoDebugDinamico > 0.6f)
+        {
+            tempoUltimoDebugDinamico = Time.time;
+            Debug.Log("Movimento mais parecido: [" + melhor + "] custo " +
+                      menor.ToString("F2") + " / tolerancia " + toleranciaDinamica);
+        }
+
+        return (menor < toleranciaDinamica) ? melhor : "Desconhecido";
+    }
+
+    static float DistanciaEntreQuadros(Vector3[] a, Vector3[] b)
+    {
+        float d = 0f;
+        for (int i = 0; i < 21; i++) d += Vector3.Distance(a[i], b[i]);
+        return d;
+    }
+
+    // DTW (Dynamic Time Warping): alinha duas sequências no tempo antes de
+    // comparar — o MESMO gesto feito mais rápido ou mais devagar ainda casa.
+    // Retorna o custo médio por passo (independe do tamanho das sequências).
+    static float CustoDTW(List<Vector3[]> a, List<Vector3[]> b)
+    {
+        int n = a.Count, m = b.Count;
+        float[,] D = new float[n + 1, m + 1];
+        for (int i = 0; i <= n; i++)
+            for (int j = 0; j <= m; j++)
+                D[i, j] = float.PositiveInfinity;
+        D[0, 0] = 0f;
+
+        for (int i = 1; i <= n; i++)
+            for (int j = 1; j <= m; j++)
+            {
+                float custo = DistanciaEntreQuadros(a[i - 1], b[j - 1]);
+                float menorCaminho = Mathf.Min(D[i - 1, j],
+                                     Mathf.Min(D[i, j - 1], D[i - 1, j - 1]));
+                D[i, j] = custo + menorCaminho;
+            }
+
+        return D[n, m] / (n + m);
     }
 }

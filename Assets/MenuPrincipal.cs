@@ -142,8 +142,9 @@ public class MenuPrincipal : MonoBehaviour
             "MODO TREINAMENTO\n\n" +
             "Faça o sinal e pressione a tecla da letra\n" +
             "para gravar (grave várias vezes!)\n" +
+            "H J K X Z gravam o MOVIMENTO por 1,3s\n" +
             "Shift + tecla apaga a letra",
-            38f, new Color(0.15f, 0.15f, 0.22f, 1f), new Vector2(0, 45), new Vector2(940, 290), false);
+            36f, new Color(0.15f, 0.15f, 0.22f, 1f), new Vector2(0, 45), new Vector2(940, 290), false);
 
         // Contador ao vivo: quantas amostras cada letra tem no banco
         textoContagem = UIFabrica.CriarTexto(painel.transform, "Contagem", "",

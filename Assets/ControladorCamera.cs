@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using MediaPipe.HandLandmark;
 using System.Collections;
+using System.Collections.Generic;
 // Apelidos para não confundir System.Diagnostics.Debug com UnityEngine.Debug
 using Processo       = System.Diagnostics.Process;
 using InfoDeProcesso = System.Diagnostics.ProcessStartInfo;
@@ -46,6 +47,17 @@ public class ControladorCamera : MonoBehaviour
     // Lidos pela interface para mostrar "estou quase reconhecendo a letra X"
     public string LetraCandidata      { get; private set; } = "";
     public float  ProgressoCandidata  { get; private set; } = 0f;
+
+    [Header("Letras dinamicas (com movimento)")]
+    public float duracaoGravacaoMovimento   = 1.3f;  // segundos gravados no treinamento
+    public float duracaoJanelaMovimento     = 1.4f;  // "memória" de movimento no jogo
+    public float intervaloChecagemMovimento = 0.25f; // de quanto em quanto compara
+
+    // Janela deslizante: os últimos ~1,4s de mão (usada pelo DTW)
+    private List<Vector3[]> janelaMovimento = new List<Vector3[]>();
+    private List<float>     temposJanela    = new List<float>();
+    private float tempoUltimaAmostraJanela     = 0f;
+    private float tempoUltimaChecagemMovimento = 0f;
 
     [Header("Exibicao da camera")]
     public bool espelharImagem  = true;  // modo "selfie" (RawImage com escala X = -1)
@@ -254,8 +266,12 @@ public class ControladorCamera : MonoBehaviour
                 if (!Input.GetKeyDown(tecla)) continue;
 
                 string letra = tecla.ToString(); // "A", "B", ... "Z"
-                if (shift) reconhecedor.ApagarLetra(letra);
-                else       StartCoroutine(GravarComAtraso(letra));
+                if (shift)
+                    reconhecedor.ApagarLetra(letra);
+                else if (reconhecedor.EhLetraDinamica(letra))
+                    StartCoroutine(GravarMovimentoComAtraso(letra)); // grava o FILME
+                else
+                    StartCoroutine(GravarComAtraso(letra));          // grava a FOTO
             }
         }
 
@@ -293,6 +309,11 @@ public class ControladorCamera : MonoBehaviour
 
         if (!MaoDetectada)
         {
+            // Mão sumiu: limpa a memória de movimento (evita "emendar"
+            // dois pedaços de gesto que não têm nada a ver)
+            janelaMovimento.Clear();
+            temposJanela.Clear();
+
             // Perdeu a mão (rastreador interno): depois de ~15 frames volta à
             // "busca ampla" (recorte grande no centro) para reencontrá-la
             if (!usandoExterno)
@@ -312,6 +333,9 @@ public class ControladorCamera : MonoBehaviour
             ? (Vector3[])rastreadorExterno.Pontos.Clone()
             : ColetarPontosDaMao();
         PontosDaMaoAtuais = pontosDaMao;
+
+        // Alimenta a memória de movimento (~15 quadros por segundo)
+        AlimentarJanelaDeMovimento(pontosDaMao);
 
         // Reposiciona o recorte para o próximo frame seguir a mão (só no interno;
         // o MediaPipe externo já faz o próprio recorte por dentro)
@@ -333,6 +357,24 @@ public class ControladorCamera : MonoBehaviour
             {
                 LimparCandidata();
                 return;
+            }
+
+            // Letras com MOVIMENTO: compara os últimos ~1,4s de mão com os
+            // movimentos gravados (DTW). Roda algumas vezes por segundo.
+            if (Time.time - tempoUltimaChecagemMovimento >= intervaloChecagemMovimento)
+            {
+                tempoUltimaChecagemMovimento = Time.time;
+                string letraMovimento = reconhecedor.ClassificarSinalDinamico(janelaMovimento);
+                if (letraMovimento != "Desconhecido" && gerenciador.TentarLetra(letraMovimento))
+                {
+                    // (sem aprendizado automático aqui: letra de MOVIMENTO não
+                    //  deve virar amostra estática — poluiria o banco de fotos)
+                    tempoUltimoReconhecimento = Time.time;
+                    janelaMovimento.Clear();
+                    temposJanela.Clear();
+                    LimparCandidata();
+                    return;
+                }
             }
 
             string letraFeita = reconhecedor.ClassificarLetra(pontosDaMao);
@@ -518,6 +560,53 @@ public class ControladorCamera : MonoBehaviour
                                     offsetBlit.y + v2.y * escalaBlit.y, 0f);
         }
         return pontos;
+    }
+
+    // Adiciona o quadro atual à "memória de movimento" (a ~15 quadros/s,
+    // independente do FPS do jogo) e descarta o que passou da janela
+    void AlimentarJanelaDeMovimento(Vector3[] pontos)
+    {
+        if (Time.time - tempoUltimaAmostraJanela < 1f / 15f) return;
+        tempoUltimaAmostraJanela = Time.time;
+
+        janelaMovimento.Add((Vector3[])pontos.Clone());
+        temposJanela.Add(Time.time);
+
+        while (temposJanela.Count > 0 && temposJanela[0] < Time.time - duracaoJanelaMovimento)
+        {
+            temposJanela.RemoveAt(0);
+            janelaMovimento.RemoveAt(0);
+        }
+    }
+
+    // Treinamento de letra DINÂMICA: conta 3s e grava um "filme" de ~1,3s
+    IEnumerator GravarMovimentoComAtraso(string letra)
+    {
+        Debug.Log("Letra com MOVIMENTO [" + letra + "]! Prepare-se... gravando em 3 segundos!");
+        yield return new WaitForSeconds(3f);
+
+        Debug.Log(">>> FACA O MOVIMENTO DE [" + letra + "] AGORA! <<<");
+        var quadros = new List<Vector3[]>();
+        float fim = Time.time + duracaoGravacaoMovimento;
+        float proximaAmostra = 0f;
+
+        while (Time.time < fim)
+        {
+            if (MaoDetectada && PontosDaMaoAtuais != null && Time.time >= proximaAmostra)
+            {
+                quadros.Add((Vector3[])PontosDaMaoAtuais.Clone());
+                proximaAmostra = Time.time + 1f / 15f; // ~15 quadros/s
+            }
+            yield return null;
+        }
+
+        if (quadros.Count < 8)
+        {
+            Debug.LogError("Poucos quadros com a mao visivel (" + quadros.Count +
+                           "). Mantenha a mao no quadro e tente de novo.");
+            yield break;
+        }
+        reconhecedor.GravarSinalDinamico(letra, quadros);
     }
 
     IEnumerator GravarComAtraso(string letra)
