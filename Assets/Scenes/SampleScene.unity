@@ -188,8 +188,8 @@ MonoBehaviour:
   pontoDeExibicao: {fileID: 9000005}
   escalaFruta: {x: 240, y: 240, z: 240}
   rotacaoFruta: {x: -50, y: 160, z: 0}
-  pontosPorLetra: 10
-  bonusPorPalavra: 50
+  pontosPorLetra: 0
+  bonusPorPalavra: 10
   tempoCelebracao: 2.5
 --- !u!1 &9000004
 GameObject:

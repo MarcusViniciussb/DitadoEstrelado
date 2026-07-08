@@ -60,7 +60,9 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2022.3.62f3\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\ChuvaDeConfetes.cs" />
     <Compile Include="Assets\RastreadorExterno.cs" />
+    <Compile Include="Assets\Cintilar.cs" />
     <Compile Include="Assets\GerenciadorDeJogo.cs" />
     <Compile Include="Assets\HoverButton.cs" />
     <Compile Include="Assets\Flutuar.cs" />
@@ -71,6 +73,7 @@
     <Compile Include="Assets\UIControle.cs" />
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\MenuPrincipal.cs" />
+    <Compile Include="Assets\ReproduzirAnimacao.cs" />
     <Compile Include="Assets\UIFabrica.cs" />
     <Compile Include="Assets\VisualizadorMaoUI.cs" />
     <Compile Include="Assets\GerenciadorDeAudio.cs" />

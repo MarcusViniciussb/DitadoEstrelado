@@ -161,6 +161,7 @@ public class UIControle : MonoBehaviour
         gerenciador.OnPontosGastos        -= MostrarPontosGastos;
         gerenciador.OnLetraCorreta        -= FlashVerde;
         gerenciador.OnVidaPerdida         -= FlashVermelho;
+        gerenciador.OnVidaGanha           -= AnimarVidaExtra;
         inscrito = false;
     }
 
@@ -174,7 +175,55 @@ public class UIControle : MonoBehaviour
         gerenciador.OnPontosGastos        += MostrarPontosGastos;
         gerenciador.OnLetraCorreta        += FlashVerde;
         gerenciador.OnVidaPerdida         += FlashVermelho;
+        gerenciador.OnVidaGanha           += AnimarVidaExtra;
         inscrito = true;
+    }
+
+    // "+1 ❤": um coração com "+1" sobe perto do chip de vidas, e o coração
+    // novo do chip aparece dando um "pulo" (escala 0 → 1 com exagero)
+    void AnimarVidaExtra()
+    {
+        StartCoroutine(RotinaVidaExtra());
+    }
+
+    IEnumerator RotinaVidaExtra()
+    {
+        // Coração flutuante com "+1" ao lado do chip de vidas
+        var coracao = UIFabrica.CriarImagem(raizCanvas, "VidaExtra", COR_VIDA,
+            new Vector2(380, -175), new Vector2(56, 56), UIFabrica.Coracao());
+        UIFabrica.Ancorar(coracao, new Vector2(0f, 1f), new Vector2(0f, 1f));
+        coracao.raycastTarget = false;
+        var mais = UIFabrica.CriarTexto(coracao.transform, "Mais", "+1",
+            36f, Color.white, new Vector2(52, 0), new Vector2(80, 56));
+
+        // O coração novo do chip "pula" ao aparecer
+        int indiceNovo = gerenciador.Vidas - 1;
+        Transform coracaoDoChip = (indiceNovo >= 0 && indiceNovo < coracoes.Count)
+                                  ? coracoes[indiceNovo].transform : null;
+
+        var rt = coracao.rectTransform;
+        Vector2 inicio = rt.anchoredPosition;
+        float duracao = 1.3f;
+
+        for (float t = 0f; t < duracao; t += Time.deltaTime)
+        {
+            float p = t / duracao;
+
+            rt.anchoredPosition = inicio + new Vector2(0f, 100f * p);
+            var c = coracao.color; c.a = 1f - p; coracao.color = c;
+            var cm = mais.color;   cm.a = 1f - p; mais.color = cm;
+
+            // "pulo" do coração do chip nos primeiros 40% da animação
+            if (coracaoDoChip != null && p < 0.4f)
+            {
+                float pulo = Mathf.Sin((p / 0.4f) * Mathf.PI); // 0 → 1 → 0
+                coracaoDoChip.localScale = Vector3.one * (1f + 0.6f * pulo);
+            }
+            yield return null;
+        }
+
+        if (coracaoDoChip != null) coracaoDoChip.localScale = Vector3.one;
+        Destroy(coracao.gameObject);
     }
 
     void FlashVerde()    { StartCoroutine(RotinaDeFlash(new Color(0.2f, 0.9f, 0.3f, 0.30f))); }

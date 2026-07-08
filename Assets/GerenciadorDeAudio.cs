@@ -16,6 +16,7 @@ public class GerenciadorDeAudio : MonoBehaviour
     AudioClip somAcerto;
     AudioClip somVitoria;
     AudioClip somErro;
+    AudioClip somVidaExtra;
 
     // Várias músicas tocando em rodízio (uma termina, entra a próxima)
     readonly System.Collections.Generic.List<AudioClip> musicas =
@@ -55,6 +56,7 @@ public class GerenciadorDeAudio : MonoBehaviour
         somAcerto  = ClipDeNotas(new[] { 523.25f, 783.99f },                0.09f, 0.18f);
         somVitoria = ClipDeNotas(new[] { 523.25f, 659.25f, 783.99f, 1046.5f }, 0.12f, 0.4f);
         somErro    = ClipDeNotas(new[] { 196f, 130.81f },                   0.16f, 0.2f); // descendo = "ops!"
+        somVidaExtra = ClipDeNotas(new[] { 659.25f, 783.99f, 1046.5f },     0.08f, 0.3f); // subida rápida = "ganhou!"
 
         GerarMusicas();
         fonteMusica.volume = volumeMusica;
@@ -80,7 +82,8 @@ public class GerenciadorDeAudio : MonoBehaviour
     public static void TocarClique()  { var g = Obter(); g.fonteSfx.PlayOneShot(g.somClique,  g.volumeSfx); }
     public static void TocarAcerto()  { var g = Obter(); g.fonteSfx.PlayOneShot(g.somAcerto,  g.volumeSfx); }
     public static void TocarVitoria() { var g = Obter(); g.fonteSfx.PlayOneShot(g.somVitoria, g.volumeSfx); }
-    public static void TocarErro()    { var g = Obter(); g.fonteSfx.PlayOneShot(g.somErro,    g.volumeSfx); }
+    public static void TocarErro()      { var g = Obter(); g.fonteSfx.PlayOneShot(g.somErro,      g.volumeSfx); }
+    public static void TocarVidaExtra() { var g = Obter(); g.fonteSfx.PlayOneShot(g.somVidaExtra, g.volumeSfx); }
 
     public static bool MusicaLigada => Obter().musicaLigada;
 

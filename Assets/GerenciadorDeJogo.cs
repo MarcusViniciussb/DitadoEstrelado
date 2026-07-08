@@ -18,8 +18,9 @@ public class GerenciadorDeJogo : MonoBehaviour
     public class ItemDePalavra
     {
         public string palavra;
-        public string caminhoPrefab; // caminho dentro de Assets/Resources (sem extensão)
-        public float  escala = 0f;   // 0 = tamanho automático (recomendado)
+        public string caminhoPrefab;  // caminho dentro de Assets/Resources (sem extensão)
+        public string caminhoTextura; // opcional: textura a aplicar no modelo
+        public float  escala = 0f;    // 0 = tamanho automático (recomendado)
     }
 
     [System.Serializable]
@@ -49,8 +50,8 @@ public class GerenciadorDeJogo : MonoBehaviour
     public Vector3 rotacaoObjeto   = new Vector3(0f, 160f, 0f); // só gira no eixo Y
 
     [Header("Pontuacao e economia")]
-    public int pontosPorLetra    = 10;
-    public int bonusPorPalavra   = 50;
+    public int pontosPorLetra    = 0;  // letras nao dao pontos...
+    public int bonusPorPalavra   = 10; // ...a PALAVRA completa da 10!
     public int custoPularLetra   = 5;
     public int custoPularPalavra = 10;
 
@@ -70,6 +71,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     public System.Action<int>    OnPontosGastos;  // animação "-5"/"-10" na tela
     public System.Action         OnLetraCorreta;  // flash verde (feedback visual)
     public System.Action         OnVidaPerdida;   // flash vermelho
+    public System.Action         OnVidaGanha;     // animação "+1 ❤" na tela
 
     // ── Estado interno ───────────────────────────────────────────────────────
     private List<ItemDePalavra> listaEmbaralhada;
@@ -217,9 +219,11 @@ public class GerenciadorDeJogo : MonoBehaviour
         Quaternion rotacao = Quaternion.Euler(rotacaoObjeto) * prefab.transform.rotation;
         objetoAtual = Instantiate(prefab, pos, rotacao);
 
+        CorrigirMateriaisParaURP(objetoAtual);                    // sem materiais rosas/brancos
+        AplicarTexturaSeDefinida(objetoAtual, item.caminhoTextura);
         AjustarTamanhoECentro(objetoAtual, item.escala, pos);
-        objetoAtual.AddComponent<Flutuar>(); // balanço suave, como se boiasse
-        TocarAnimacaoSeExistir(objetoAtual); // animais animados ganham vida!
+        objetoAtual.AddComponent<Flutuar>();                      // balanço suave, como se boiasse
+        ReproduzirAnimacao.Tocar(objetoAtual, item.caminhoPrefab); // animais ganham vida!
 
         indiceLetra   = 0;
         tempoRestante = fases[faseAtual].tempoPorPalavra; // reinicia a cada palavra
@@ -227,25 +231,50 @@ public class GerenciadorDeJogo : MonoBehaviour
                   Mathf.RoundToInt(tempoRestante) + "s para soletrar");
     }
 
-    // Se o modelo tem animações (importadas como Legacy), toca em loop —
-    // prefere um clipe chamado "Idle" se existir
-    void TocarAnimacaoSeExistir(GameObject go)
+    // Materiais dos pacotes vêm no shader antigo ("Standard"), que o URP
+    // não renderiza (fica rosa/branco). Troca pelo URP Lit preservando a
+    // cor e a textura que o material tinha.
+    static void CorrigirMateriaisParaURP(GameObject go)
     {
-        var animacao = go.GetComponentInChildren<Animation>();
-        if (animacao == null) return;
+        Shader urp = Shader.Find("Universal Render Pipeline/Lit");
+        if (urp == null) return;
 
-        string escolhido = null;
-        foreach (AnimationState estado in animacao)
+        foreach (var renderizador in go.GetComponentsInChildren<Renderer>())
+            foreach (var material in renderizador.materials)
+            {
+                if (material == null || material.shader == null) continue;
+                if (material.shader.name.Contains("Universal")) continue; // já é URP
+
+                Color   cor = material.HasProperty("_Color")   ? material.color       : Color.white;
+                Texture tex = material.HasProperty("_MainTex") ? material.mainTexture : null;
+
+                material.shader = urp;
+                material.SetColor("_BaseColor", cor);
+                if (tex != null) material.SetTexture("_BaseMap", tex);
+            }
+    }
+
+    // Alguns modelos (comidas) têm a textura num arquivo separado que o
+    // importador não conecta sozinho — aplicamos manualmente
+    static void AplicarTexturaSeDefinida(GameObject go, string caminhoTextura)
+    {
+        if (string.IsNullOrEmpty(caminhoTextura)) return;
+
+        var textura = Resources.Load<Texture2D>(caminhoTextura);
+        if (textura == null)
         {
-            estado.wrapMode = WrapMode.Loop;
-            if (escolhido == null) escolhido = estado.name;
-            if (estado.name.ToLower().Contains("idle")) escolhido = estado.name;
+            Debug.LogWarning("Textura nao encontrada em Resources: " + caminhoTextura);
+            return;
         }
-        if (escolhido != null)
-        {
-            animacao.wrapMode = WrapMode.Loop;
-            animacao.Play(escolhido);
-        }
+
+        foreach (var renderizador in go.GetComponentsInChildren<Renderer>())
+            foreach (var material in renderizador.materials)
+            {
+                material.SetTexture("_BaseMap", textura);
+                material.mainTexture = textura;
+                if (material.HasProperty("_BaseColor"))
+                    material.SetColor("_BaseColor", Color.white);
+            }
     }
 
     // Auto-ajuste: mede o modelo (bounds) e o redimensiona para
@@ -429,6 +458,8 @@ public class GerenciadorDeJogo : MonoBehaviour
             {
                 vidas++;
                 OnVidasAtualizadas?.Invoke(vidas);
+                OnVidaGanha?.Invoke(); // animação "+1 coração"
+                GerenciadorDeAudio.TocarVidaExtra();
                 Debug.Log("VIDA EXTRA! Vidas: " + vidas);
             }
         }
@@ -448,14 +479,16 @@ public class GerenciadorDeJogo : MonoBehaviour
     // ── As fases padrão do jogo ──────────────────────────────────────────────
     static List<FaseDoJogo> CriarFasesPadrao()
     {
-        ItemDePalavra Item(string palavra, string caminho) =>
-            new ItemDePalavra { palavra = palavra, caminhoPrefab = caminho };
+        ItemDePalavra Item(string palavra, string caminho, string textura = null) =>
+            new ItemDePalavra { palavra = palavra, caminhoPrefab = caminho,
+                                caminhoTextura = textura };
 
         const string FRUTAS     = "Low Poly Fruits/Prefabs/";
         const string FAZENDA    = "Farm Animals by @Quaternius/FBX/";
         const string SELVAGEM   = "Ultimate Animated Animals - July 2021/FBX/";
         const string TRANSPORTE = "Public Transport Pack - Feb 2017/FBX/";
         const string COMIDA     = "Junk Food Pack - Apr 2017/FBX/";
+        const string TEXTURAS   = "Junk Food Pack - Apr 2017/Blender/Textures/";
 
         return new List<FaseDoJogo>
         {
@@ -502,7 +535,8 @@ public class GerenciadorDeJogo : MonoBehaviour
                 {
                     Item("ONIBUS",     TRANSPORTE + "Bus"),
                     Item("TREM",       TRANSPORTE + "Train"),
-                    Item("TAXI",       TRANSPORTE + "Taxi"),
+                    Item("TAXI",       TRANSPORTE + "Taxi",
+                         "Public Transport Pack - Feb 2017/Blends/TaxiTexture"),
                     Item("AMBULANCIA", TRANSPORTE + "Ambulance"),
                     Item("BICICLETA",  TRANSPORTE + "Bicycle"),
                     Item("SEMAFORO",   TRANSPORTE + "TrafficLight"),
@@ -513,13 +547,13 @@ public class GerenciadorDeJogo : MonoBehaviour
                 nome = "COMIDAS", tempoPorPalavra = 10f,
                 itens = new List<ItemDePalavra>
                 {
-                    Item("PIZZA",        COMIDA + "Pizza"),
-                    Item("BOLO",         COMIDA + "Cake"),
-                    Item("BISCOITO",     COMIDA + "Cookie"),
-                    Item("SORVETE",      COMIDA + "Icecream"),
-                    Item("ROSQUINHA",    COMIDA + "Donut"),
-                    Item("HAMBURGUER",   COMIDA + "Burger"),
-                    Item("REFRIGERANTE", COMIDA + "Soda"),
+                    Item("PIZZA",        COMIDA + "Pizza",    TEXTURAS + "PizzaTexture"),
+                    Item("BOLO",         COMIDA + "Cake",     TEXTURAS + "CakeTexture"),
+                    Item("BISCOITO",     COMIDA + "Cookie",   TEXTURAS + "CookieTexture"),
+                    Item("SORVETE",      COMIDA + "Icecream", TEXTURAS + "Icecream"),
+                    Item("ROSQUINHA",    COMIDA + "Donut",    TEXTURAS + "DonutTexture"),
+                    Item("HAMBURGUER",   COMIDA + "Burger",   TEXTURAS + "BurgerTexture"),
+                    Item("REFRIGERANTE", COMIDA + "Soda",     TEXTURAS + "SodaTexture"),
                 }
             },
         };
