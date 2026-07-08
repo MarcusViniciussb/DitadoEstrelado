@@ -14,11 +14,12 @@ public class ReproduzirAnimacao : MonoBehaviour
     private AnimationClipPlayable playable;
     private bool                  pronto = false;
 
-    public static void Tocar(GameObject alvo, string caminhoResources)
+    // Retorna true se encontrou e tocou uma animação (false = modelo estático)
+    public static bool Tocar(GameObject alvo, string caminhoResources)
     {
         // Os clipes moram DENTRO do arquivo FBX — LoadAll pega os sub-assets
         var clipes = Resources.LoadAll<AnimationClip>(caminhoResources);
-        if (clipes == null || clipes.Length == 0) return; // modelo sem animação
+        if (clipes == null || clipes.Length == 0) return false; // sem animação
 
         // Prefere um clipe chamado "Idle" (parado respirando); senão o primeiro
         AnimationClip escolhido = clipes[0];
@@ -30,6 +31,7 @@ public class ReproduzirAnimacao : MonoBehaviour
 
         var reprodutor = alvo.AddComponent<ReproduzirAnimacao>();
         reprodutor.Iniciar(animator, escolhido);
+        return true;
     }
 
     void Iniciar(Animator animator, AnimationClip clipeEscolhido)

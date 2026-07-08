@@ -36,7 +36,7 @@ public class GerenciadorDeJogo : MonoBehaviour
 
     // Quando as fases padrão do código mudam, este número sobe e a cena
     // esquece a versão antiga que tinha memorizado
-    const int VERSAO_DAS_FASES = 2;
+    const int VERSAO_DAS_FASES = 3;
     public int versaoDasFases = 0;
 
     // Música por fase: índice da faixa (0 = calma ... 4 = agitada)
@@ -223,7 +223,10 @@ public class GerenciadorDeJogo : MonoBehaviour
         AplicarTexturaSeDefinida(objetoAtual, item.caminhoTextura);
         AjustarTamanhoECentro(objetoAtual, item.escala, pos);
         objetoAtual.AddComponent<Flutuar>();                      // balanço suave, como se boiasse
-        ReproduzirAnimacao.Tocar(objetoAtual, item.caminhoPrefab); // animais ganham vida!
+
+        // Modelo animado toca a animação em loop; estático ganha "respiração"
+        bool animou = ReproduzirAnimacao.Tocar(objetoAtual, item.caminhoPrefab);
+        if (!animou) objetoAtual.AddComponent<RespirarSuave>();
 
         indiceLetra   = 0;
         tempoRestante = fases[faseAtual].tempoPorPalavra; // reinicia a cada palavra
@@ -486,7 +489,9 @@ public class GerenciadorDeJogo : MonoBehaviour
         const string FRUTAS     = "Low Poly Fruits/Prefabs/";
         const string FAZENDA    = "Farm Animals by @Quaternius/FBX/";
         const string SELVAGEM   = "Ultimate Animated Animals - July 2021/FBX/";
-        const string TRANSPORTE = "Public Transport Pack - Feb 2017/FBX/";
+        // Transporte usa os OBJ: as CORES dos veículos vêm nos materiais .mtl
+        // (a exportação FBX deste pacote perde as cores)
+        const string TRANSPORTE = "Public Transport Pack - Feb 2017/OBJ/";
         const string COMIDA     = "Junk Food Pack - Apr 2017/FBX/";
         const string TEXTURAS   = "Junk Food Pack - Apr 2017/Blender/Textures/";
 
@@ -514,18 +519,21 @@ public class GerenciadorDeJogo : MonoBehaviour
                 nome = "ANIMAIS", tempoPorPalavra = 20f,
                 itens = new List<ItemDePalavra>
                 {
-                    Item("VACA",     FAZENDA  + "Cow"),
-                    Item("PORCO",    FAZENDA  + "Pig"),
-                    Item("OVELHA",   FAZENDA  + "Sheep"),
-                    Item("CAVALO",   FAZENDA  + "Horse"),
-                    Item("ZEBRA",    FAZENDA  + "Zebra"),
-                    Item("LHAMA",    FAZENDA  + "Llama"),
+                    // Animados (pacote Ultimate): VACA, CAVALO e LHAMA trocados
+                    // pelas versões COM animação
+                    Item("VACA",     SELVAGEM + "Cow"),
+                    Item("CAVALO",   SELVAGEM + "Horse"),
+                    Item("LHAMA",    SELVAGEM + "Alpaca"),
                     Item("TOURO",    SELVAGEM + "Bull"),
                     Item("CERVO",    SELVAGEM + "Deer"),
                     Item("BURRO",    SELVAGEM + "Donkey"),
                     Item("RAPOSA",   SELVAGEM + "Fox"),
                     Item("LOBO",     SELVAGEM + "Wolf"),
                     Item("CACHORRO", SELVAGEM + "Husky"),
+                    // Estáticos (Farm, sem esqueleto): ganham "respiração"
+                    Item("PORCO",    FAZENDA  + "Pig"),
+                    Item("OVELHA",   FAZENDA  + "Sheep"),
+                    Item("ZEBRA",    FAZENDA  + "Zebra"),
                 }
             },
             new FaseDoJogo
