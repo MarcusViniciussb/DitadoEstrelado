@@ -35,7 +35,9 @@ public class ControladorCamera : MonoBehaviour
     public bool  iniciarRastreadorAutomaticamente = true; // Unity abre o Python sozinho!
     // Tempo máximo aguardando o Python carregar (a 1ª vez pode ser lenta:
     // antivírus + carga do MediaPipe). Enquanto o processo estiver vivo, espera.
-    public float esperaRastreadorExterno = 45f;
+    // (campo renomeado de "esperaRastreadorExterno" para o Unity esquecer o
+    //  valor antigo de 3s que ficou memorizado na cena)
+    public float esperaMaximaRastreador = 45f;
     private bool usandoExterno = false;
     private Processo processoRastreador; // guardamos para fechar junto com o jogo
 
@@ -156,8 +158,9 @@ public class ControladorCamera : MonoBehaviour
         float inicioEspera   = Time.time;
         float proximoRelato  = Time.time + 4f;
         bool  morreu         = false;
+        Debug.Log("Aguardando o rastreador por ate " + esperaMaximaRastreador + "s...");
 
-        while (Time.time - inicioEspera < esperaRastreadorExterno)
+        while (Time.time - inicioEspera < esperaMaximaRastreador)
         {
             if (rastreadorExterno.Ativo)
             {
