@@ -26,10 +26,21 @@ public class MenuPrincipal : MonoBehaviour
     static readonly Color COR_SAIR       = new Color(0.85f, 0.30f, 0.30f, 1f); // vermelho
     static readonly Color COR_HUD        = new Color(0.08f, 0.10f, 0.30f, 0.75f);
 
+    [Header("Senha da area do professor (modo treinamento)")]
+    public string senhaAdmin = "1234";
+
     GameObject telaMenu;
     GameObject botaoMenuHud;
     GameObject dicaTreinamento;
     TextMeshProUGUI textoContagem; // contador de amostras por letra (treinamento)
+
+    GameObject botaoSom;           // liga/desliga a música (sempre visível)
+    GameObject riscoSom;           // risco vermelho = música desligada
+
+    GameObject painelSenha;        // teclado numérico da área do professor
+    TextMeshProUGUI displaySenha;
+    string senhaDigitada = "";
+
     bool  menuAberto;
     float timerFimDeJogo;
     float timerContagem;
@@ -44,6 +55,8 @@ public class MenuPrincipal : MonoBehaviour
     {
         AbrirMenu();
         GerenciadorDeAudio.TocarMusica();
+        // O jogador pode ter desligado a música na última vez — reflete no ícone
+        riscoSom.SetActive(!GerenciadorDeAudio.MusicaLigada);
     }
 
     void Update()
@@ -107,9 +120,11 @@ public class MenuPrincipal : MonoBehaviour
         UIFabrica.CriarBotao(telaMenu.transform, "BotaoJogar", "JOGAR", COR_JOGAR,
             new Vector2(0, 60),   new Vector2(560, 130), 56f, controlador, Jogar);
         UIFabrica.CriarBotao(telaMenu.transform, "BotaoTreinar", "TREINAMENTO", COR_TREINAR,
-            new Vector2(0, -110), new Vector2(560, 130), 52f, controlador, Treinar);
+            new Vector2(0, -110), new Vector2(560, 130), 52f, controlador, PedirSenha);
         UIFabrica.CriarBotao(telaMenu.transform, "BotaoSair", "SAIR", COR_SAIR,
             new Vector2(0, -280), new Vector2(560, 130), 52f, controlador, Sair);
+
+        ConstruirPainelSenha();
 
         UIFabrica.CriarTexto(telaMenu.transform, "Dica",
             "Toque no botão ou aponte o dedo por 3 segundos",
@@ -133,27 +148,137 @@ public class MenuPrincipal : MonoBehaviour
         UIFabrica.Ancorar(botao, new Vector2(1f, 1f), new Vector2(1f, 1f));
         botaoMenuHud = botao.gameObject;
 
+        // Botão de SOM logo abaixo do MENU — visível SEMPRE (menu e jogo)
+        var som = UIFabrica.CriarBotao(transform, "BotaoSom", "SOM", COR_HUD,
+            new Vector2(-30, -135), new Vector2(220, 90), 38f, controlador, AlternarSom);
+        UIFabrica.Ancorar(som, new Vector2(1f, 1f), new Vector2(1f, 1f));
+        botaoSom = som.gameObject;
+
+        // Risco vermelho na diagonal = música desligada
+        var risco = UIFabrica.CriarImagem(som.transform, "Risco",
+            new Color(0.9f, 0.2f, 0.2f, 0.95f), Vector2.zero, new Vector2(200, 10),
+            UIFabrica.Arredondado(), true);
+        risco.rectTransform.localEulerAngles = new Vector3(0, 0, 20f);
+        risco.raycastTarget = false;
+        riscoSom = risco.gameObject;
+        riscoSom.SetActive(false);
+
         // Cartão de instruções do modo treinamento
         var painel = UIFabrica.CriarImagem(transform, "DicaTreinamento",
-            new Color(1f, 1f, 1f, 0.88f), new Vector2(0, -160), new Vector2(980, 400),
+            new Color(1f, 1f, 1f, 0.88f), new Vector2(0, -160), new Vector2(980, 470),
             UIFabrica.Arredondado(), true);
         UIFabrica.Ancorar(painel, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
         UIFabrica.CriarTexto(painel.transform, "Texto",
             "MODO TREINAMENTO\n\n" +
             "Faça o sinal e pressione a tecla da letra\n" +
             "para gravar (grave várias vezes!)\n" +
-            "H J K X Z gravam o MOVIMENTO por 1,3s\n" +
+            "H J K W X Z Ç gravam o MOVIMENTO por 1,3s\n" +
             "Shift + tecla apaga a letra",
-            36f, new Color(0.15f, 0.15f, 0.22f, 1f), new Vector2(0, 45), new Vector2(940, 290), false);
+            36f, new Color(0.15f, 0.15f, 0.22f, 1f), new Vector2(0, 80), new Vector2(940, 290), false);
 
         // Contador ao vivo: quantas amostras cada letra tem no banco
+        // (várias linhas, com quebra automática feita pelo ResumoDoBanco)
         textoContagem = UIFabrica.CriarTexto(painel.transform, "Contagem", "",
-            34f, new Color(0.1f, 0.35f, 0.7f, 1f), new Vector2(0, -150), new Vector2(940, 80));
+            34f, new Color(0.1f, 0.35f, 0.7f, 1f), new Vector2(0, -155), new Vector2(940, 150));
         textoContagem.enableAutoSizing = true;
-        textoContagem.fontSizeMin = 20f;
-        textoContagem.fontSizeMax = 34f;
+        textoContagem.fontSizeMin = 24f;
+        textoContagem.fontSizeMax = 36f;
 
         dicaTreinamento = painel.gameObject;
+    }
+
+    // ── Painel de senha (área do professor) ──────────────────────────────────
+    void ConstruirPainelSenha()
+    {
+        var fundo = UIFabrica.CriarImagem(telaMenu.transform, "PainelSenha",
+            new Color(0.07f, 0.09f, 0.25f, 0.97f), Vector2.zero, new Vector2(680, 1000),
+            UIFabrica.Arredondado(), true);
+        painelSenha = fundo.gameObject;
+
+        UIFabrica.CriarTexto(fundo.transform, "Titulo", "ÁREA DO PROFESSOR",
+            48f, COR_TITULO, new Vector2(0, 410), new Vector2(640, 80));
+        UIFabrica.CriarTexto(fundo.transform, "Sub", "Digite a senha para o treinamento",
+            30f, new Color(1f, 1f, 1f, 0.8f), new Vector2(0, 345), new Vector2(640, 50), false);
+
+        // Visor da senha (mostra bolinhas)
+        var visor = UIFabrica.CriarImagem(fundo.transform, "Visor",
+            new Color(1f, 1f, 1f, 0.92f), new Vector2(0, 260), new Vector2(420, 90),
+            UIFabrica.Arredondado(), true);
+        displaySenha = UIFabrica.CriarTexto(visor.transform, "Texto", "",
+            52f, new Color(0.1f, 0.1f, 0.2f, 1f), Vector2.zero, new Vector2(400, 90));
+
+        // Teclado numérico 3x4: 1-9, C (limpar), 0, OK
+        string[] teclas = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "OK" };
+        for (int i = 0; i < teclas.Length; i++)
+        {
+            string tecla = teclas[i]; // cópia local: cada botão guarda a sua!
+            int coluna = i % 3, linha = i / 3;
+            Vector2 pos = new Vector2((coluna - 1) * 200f, 130f - linha * 155f);
+            Color cor = (tecla == "OK") ? COR_JOGAR : (tecla == "C") ? COR_SAIR : COR_TREINAR;
+            UIFabrica.CriarBotao(fundo.transform, "Tecla" + tecla, tecla, cor,
+                pos, new Vector2(180, 135), 48f, controlador, () => TeclaSenha(tecla));
+        }
+
+        UIFabrica.CriarBotao(fundo.transform, "Voltar", "VOLTAR",
+            new Color(0.4f, 0.4f, 0.5f, 1f), new Vector2(0, -420), new Vector2(300, 90),
+            36f, controlador, FecharPainelSenha);
+
+        painelSenha.SetActive(false);
+    }
+
+    void PedirSenha()
+    {
+        GerenciadorDeAudio.TocarClique();
+        senhaDigitada = "";
+        AtualizarVisorSenha();
+        painelSenha.SetActive(true);
+        painelSenha.transform.SetAsLastSibling(); // por cima dos botões do menu
+    }
+
+    void FecharPainelSenha()
+    {
+        GerenciadorDeAudio.TocarClique();
+        painelSenha.SetActive(false);
+    }
+
+    void TeclaSenha(string tecla)
+    {
+        GerenciadorDeAudio.TocarClique();
+        if (tecla == "C")
+        {
+            senhaDigitada = "";
+        }
+        else if (tecla == "OK")
+        {
+            if (senhaDigitada == senhaAdmin)
+            {
+                painelSenha.SetActive(false);
+                Treinar();
+                return;
+            }
+            displaySenha.text  = "ERRADA!";
+            displaySenha.color = new Color(0.8f, 0.15f, 0.15f, 1f);
+            senhaDigitada = "";
+            return;
+        }
+        else if (senhaDigitada.Length < 8)
+        {
+            senhaDigitada += tecla;
+        }
+        AtualizarVisorSenha();
+    }
+
+    void AtualizarVisorSenha()
+    {
+        displaySenha.color = new Color(0.1f, 0.1f, 0.2f, 1f);
+        displaySenha.text  = new string('*', senhaDigitada.Length);
+    }
+
+    void AlternarSom()
+    {
+        GerenciadorDeAudio.TocarClique();
+        GerenciadorDeAudio.AlternarMusica();
+        riscoSom.SetActive(!GerenciadorDeAudio.MusicaLigada);
     }
 
     // ── Ações dos botões ─────────────────────────────────────────────────────
@@ -206,6 +331,8 @@ public class MenuPrincipal : MonoBehaviour
 
         telaMenu.SetActive(true);
         telaMenu.transform.SetAsLastSibling(); // menu por cima de tudo
+        if (painelSenha != null) painelSenha.SetActive(false);
+        if (botaoSom    != null) botaoSom.transform.SetAsLastSibling(); // som clicável até no menu
         botaoMenuHud.SetActive(false);
         dicaTreinamento.SetActive(false);
         if (painelPalavra != null) painelPalavra.SetActive(false);

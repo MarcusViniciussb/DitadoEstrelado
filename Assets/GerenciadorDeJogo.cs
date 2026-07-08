@@ -122,6 +122,7 @@ public class GerenciadorDeJogo : MonoBehaviour
         Vector3    pos = pontoDeExibicao != null ? pontoDeExibicao.position : Vector3.zero;
         frutaAtual = Instantiate(item.prefab, pos, Quaternion.Euler(rotacaoFruta));
         frutaAtual.transform.localScale = escalaFruta;
+        frutaAtual.AddComponent<Flutuar>(); // balanço suave, como se boiasse
         indiceLetra = 0;
         Debug.Log("Palavra: [" + item.palavra + "]");
     }

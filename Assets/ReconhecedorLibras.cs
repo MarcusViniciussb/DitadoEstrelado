@@ -17,12 +17,13 @@ public class ReconhecedorLibras : MonoBehaviour
     [Range(0f, 3f)] public float pesoDosAngulos = 0.5f; // importância dos ângulos vs posições
 
     [Header("Letras dinamicas (gravadas como MOVIMENTO, nao como foto)")]
-    public string[] letrasDinamicas = { "H", "J", "K", "X", "Z" };
+    // (campo renomeado para o Unity aplicar a lista nova — W e Ç também se movem)
+    public string[] letrasComMovimento = { "H", "J", "K", "W", "X", "Z", "Ç" };
     public float toleranciaDinamica = 4.5f; // mesmo esquema: sobe = aceita mais facil
 
     public bool EhLetraDinamica(string letra)
     {
-        foreach (var l in letrasDinamicas)
+        foreach (var l in letrasComMovimento)
             if (l == letra) return true;
         return false;
     }
@@ -111,10 +112,17 @@ public class ReconhecedorLibras : MonoBehaviour
             contagem[chave] = contagem.ContainsKey(chave) ? contagem[chave] + 1 : 1;
         }
 
+        // Monta em linhas de 6 itens para caber legível no cartão
         var sb = new System.Text.StringBuilder();
+        int itensNaLinha = 0;
         foreach (var par in contagem)
-            sb.Append(par.Key).Append(": ").Append(par.Value).Append("   ");
-        return sb.ToString();
+        {
+            sb.Append(par.Key).Append(": ").Append(par.Value);
+            itensNaLinha++;
+            if (itensNaLinha % 6 == 0) sb.Append('\n');
+            else                       sb.Append("    ");
+        }
+        return sb.ToString().TrimEnd();
     }
 
     // Normaliza pontos (relativos ao pulso) pelo TAMANHO da mão — a distância

@@ -374,6 +374,18 @@ public class ControladorCamera : MonoBehaviour
                 else
                     StartCoroutine(GravarComAtraso(letra));          // grava a FOTO
             }
+
+            // Ç não existe no enum de teclas do Unity — no teclado brasileiro
+            // (ABNT) a tecla Ç chega como "Semicolon" (posição do ; americano)
+            if (Input.GetKeyDown(KeyCode.Semicolon))
+            {
+                if (shift)
+                    reconhecedor.ApagarLetra("Ç");
+                else if (reconhecedor.EhLetraDinamica("Ç"))
+                    StartCoroutine(GravarMovimentoComAtraso("Ç"));
+                else
+                    StartCoroutine(GravarComAtraso("Ç"));
+            }
         }
 
         // Space     = pula a PALAVRA

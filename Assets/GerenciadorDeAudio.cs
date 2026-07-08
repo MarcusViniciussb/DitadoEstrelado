@@ -10,11 +10,17 @@ public class GerenciadorDeAudio : MonoBehaviour
     const int TAXA = 44100; // amostras de áudio por segundo (qualidade CD)
 
     AudioSource fonteSfx;    // efeitos sonoros
-    AudioSource fonteMusica; // música de fundo em loop
+    AudioSource fonteMusica; // música de fundo
 
     AudioClip somClique;
     AudioClip somAcerto;
     AudioClip somVitoria;
+
+    // Várias músicas tocando em rodízio (uma termina, entra a próxima)
+    readonly System.Collections.Generic.List<AudioClip> musicas =
+        new System.Collections.Generic.List<AudioClip>();
+    int  musicaAtual  = 0;
+    bool musicaLigada = true;
 
     [Range(0f, 1f)] public float volumeSfx    = 0.9f;
     [Range(0f, 1f)] public float volumeMusica = 0.3f;
@@ -39,15 +45,29 @@ public class GerenciadorDeAudio : MonoBehaviour
 
         fonteMusica = gameObject.AddComponent<AudioSource>();
         fonteMusica.playOnAwake = false;
-        fonteMusica.loop = true;
+        fonteMusica.loop = false; // sem loop: quando acaba, o Update troca de faixa
 
         // Frequências em Hz: C5=523.25  E5=659.25  G5=783.99  C6=1046.5
         somClique  = ClipDeNotas(new[] { 880f },                            0.07f, 0.05f);
         somAcerto  = ClipDeNotas(new[] { 523.25f, 783.99f },                0.09f, 0.18f);
         somVitoria = ClipDeNotas(new[] { 523.25f, 659.25f, 783.99f, 1046.5f }, 0.12f, 0.4f);
 
-        fonteMusica.clip   = GerarMusica();
+        GerarMusicas();
         fonteMusica.volume = volumeMusica;
+
+        // Lembra a escolha do jogador entre sessões (1 = ligada)
+        musicaLigada = PlayerPrefs.GetInt("musicaLigada", 1) == 1;
+    }
+
+    // Quando uma faixa termina, toca a próxima do rodízio
+    void Update()
+    {
+        if (musicaLigada && !fonteMusica.isPlaying && musicas.Count > 0)
+        {
+            musicaAtual = (musicaAtual + 1) % musicas.Count;
+            fonteMusica.clip = musicas[musicaAtual];
+            fonteMusica.Play();
+        }
     }
 
     // ── Métodos públicos (chame de qualquer script) ──────────────────────────
@@ -55,10 +75,26 @@ public class GerenciadorDeAudio : MonoBehaviour
     public static void TocarAcerto()  { var g = Obter(); g.fonteSfx.PlayOneShot(g.somAcerto,  g.volumeSfx); }
     public static void TocarVitoria() { var g = Obter(); g.fonteSfx.PlayOneShot(g.somVitoria, g.volumeSfx); }
 
+    public static bool MusicaLigada => Obter().musicaLigada;
+
+    // Liga/desliga a música de fundo (o botão de som chama isto)
+    public static void AlternarMusica()
+    {
+        var g = Obter();
+        g.musicaLigada = !g.musicaLigada;
+        PlayerPrefs.SetInt("musicaLigada", g.musicaLigada ? 1 : 0);
+        if (g.musicaLigada) g.fonteMusica.Play();
+        else                g.fonteMusica.Pause();
+    }
+
     public static void TocarMusica()
     {
         var g = Obter();
-        if (!g.fonteMusica.isPlaying) g.fonteMusica.Play();
+        if (g.musicaLigada && !g.fonteMusica.isPlaying && g.musicas.Count > 0)
+        {
+            g.fonteMusica.clip = g.musicas[g.musicaAtual];
+            g.fonteMusica.Play();
+        }
     }
 
     public static void PararMusica() { Obter().fonteMusica.Stop(); }
@@ -107,14 +143,13 @@ public class GerenciadorDeAudio : MonoBehaviour
         return clip;
     }
 
-    // Música de fundo: melodia calma na escala pentatônica de Dó, em loop.
-    // Cada número é a frequência da nota em Hz; 0 = pausa.
-    AudioClip GerarMusica()
+    // Gera as músicas de fundo. Cada número é a frequência da nota em Hz;
+    // 0 = pausa. Notas usadas (escala pentatônica, sempre soa bem):
+    // C4=261.63 D4=293.66 E4=329.63 G4=392 A4=440 C5=523.25 D5=587.33 E5=659.25
+    void GerarMusicas()
     {
-        const float passo = 0.3f; // duração de cada célula rítmica (s)
-
-        // C4=261.63 D4=293.66 E4=329.63 G4=392 A4=440 C5=523.25 D5=587.33
-        float[] melodia =
+        // Faixa 1: calma, a original
+        musicas.Add(RenderizarMusica(0.3f, new[]
         {
             523.25f, 0, 392f,    0, 440f,    0, 392f, 0,
             329.63f, 0, 392f,    0, 440f,    0, 0,    0,
@@ -122,11 +157,34 @@ public class GerenciadorDeAudio : MonoBehaviour
             392f,    0, 329.63f, 0, 293.66f, 0, 0,    0,
             329.63f, 392f, 440f, 0, 523.25f, 0, 440f, 0,
             392f,    0, 329.63f, 0, 261.63f, 0, 0,    0,
-        };
+        },
+        new[] { 130.81f, 98f, 110f, 98f, 130.81f, 98f }));
 
-        // Uma nota grave a cada 8 células: C3=130.81 G2=98 A2=110
-        float[] baixo = { 130.81f, 98f, 110f, 98f, 130.81f, 98f };
+        // Faixa 2: mais animada (arpejos subindo, andamento mais rápido)
+        musicas.Add(RenderizarMusica(0.24f, new[]
+        {
+            261.63f, 329.63f, 392f, 523.25f, 392f, 329.63f, 261.63f, 0,
+            293.66f, 392f, 440f, 587.33f, 440f, 392f, 293.66f, 0,
+            329.63f, 392f, 523.25f, 659.25f, 523.25f, 392f, 329.63f, 0,
+            261.63f, 329.63f, 392f, 440f, 523.25f, 0, 523.25f, 0,
+        },
+        new[] { 130.81f, 110f, 98f, 130.81f }));
 
+        // Faixa 3: bem suave, tipo canção de ninar (notas longas)
+        musicas.Add(RenderizarMusica(0.4f, new[]
+        {
+            440f, 0, 0, 523.25f, 0, 0, 440f, 0,
+            392f, 0, 0, 329.63f, 0, 0, 0,    0,
+            440f, 0, 0, 587.33f, 0, 0, 523.25f, 0,
+            440f, 0, 0, 392f,    0, 0, 0,    0,
+        },
+        new[] { 110f, 98f, 110f, 130.81f }));
+    }
+
+    // Transforma um padrão de notas + baixo num clipe de áudio
+    AudioClip RenderizarMusica(float passo, float[] melodia, float[] baixo)
+    {
+        int celulasPorBaixo = Mathf.Max(1, melodia.Length / baixo.Length);
         int totalAmostras = Mathf.CeilToInt(melodia.Length * passo * TAXA);
         float[] dados = new float[totalAmostras];
 
@@ -135,7 +193,8 @@ public class GerenciadorDeAudio : MonoBehaviour
                 EscreverNota(dados, melodia[i], i * passo, passo * 3.2f, 0.22f);
 
         for (int b = 0; b < baixo.Length; b++)
-            EscreverNota(dados, baixo[b], b * 8 * passo, passo * 7f, 0.16f);
+            EscreverNota(dados, baixo[b], b * celulasPorBaixo * passo,
+                         passo * celulasPorBaixo * 0.9f, 0.16f);
 
         return CriarClip("musica", dados);
     }

@@ -167,7 +167,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   itens:
-  - palavra: MACA
+  - palavra: "MA\xC7A"
     prefab: {fileID: 1829371231341652, guid: 426b44a7575f71e479fab4f4e8431989, type: 3}
   - palavra: BANANA
     prefab: {fileID: 1407451490957870, guid: 3ce32ffa6ccf60e4ab65d9e396f43433, type: 3}
@@ -273,6 +273,21 @@ MonoBehaviour:
   m_InputActionsPerSecond: 10
   m_RepeatDelay: 0.5
   m_ForceModuleActive: 0
+--- !u!114 &9000009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 469206615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e3b9d1c5a2f4e6b8c0d2f4a6e8b1d3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  portaLandmarks: 5052
+  portaVideo: 5053
+  tempoMaximoSemSinal: 1.5
 --- !u!1 &19811181
 GameObject:
   m_ObjectHideFlags: 0
@@ -1063,10 +1078,18 @@ MonoBehaviour:
   MODO_TREINAMENTO: 1
   gerenciador: {fileID: 9000003}
   rastreadorExterno: {fileID: 9000009}
+  iniciarRastreadorAutomaticamente: 1
+  esperaMaximaRastreador: 45
   cooldownReconhecimento: 0.9
   tempoEstabilidade: 0.35
+  duracaoGravacaoMovimento: 1.3
+  duracaoJanelaMovimento: 1.4
+  intervaloChecagemMovimento: 0.25
   espelharImagem: 1
   inverterVertical: 0
+  zoomDaTela: 1.2
+  zoomInteligente: 1
+  margemDoZoom: 2.4
 --- !u!114 &469206618
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1116,21 +1139,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ReconhecedorLibras
   bancoDeDados: {fileID: 11400000, guid: 5fc1247038b10c84eaa91b1c244f8b3f, type: 2}
   toleranciaDeErro: 6
---- !u!114 &9000009
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 469206615}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7e3b9d1c5a2f4e6b8c0d2f4a6e8b1d3f, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  portaLandmarks: 5052
-  portaVideo: 5053
-  tempoMaximoSemSinal: 1.5
+  vizinhosK: 3
+  pesoDosAngulos: 1
+  letrasDinamicas:
+  - H
+  - J
+  - K
+  - X
+  - Z
+  - "\xC7"
+  toleranciaDinamica: 4.5
   mostrarDebug: 0
 --- !u!1 &832575517
 GameObject:
