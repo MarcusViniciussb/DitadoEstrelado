@@ -20,7 +20,9 @@ public class GerenciadorDeAudio : MonoBehaviour
     // Várias músicas tocando em rodízio (uma termina, entra a próxima)
     readonly System.Collections.Generic.List<AudioClip> musicas =
         new System.Collections.Generic.List<AudioClip>();
+    AudioClip musicaVitoria;
     int  musicaAtual  = 0;
+    int  faixaFixa    = -1; // >= 0: repete sempre a mesma faixa (música da fase)
     bool musicaLigada = true;
 
     [Range(0f, 1f)] public float volumeSfx    = 0.9f;
@@ -61,12 +63,14 @@ public class GerenciadorDeAudio : MonoBehaviour
         musicaLigada = PlayerPrefs.GetInt("musicaLigada", 1) == 1;
     }
 
-    // Quando uma faixa termina, toca a próxima do rodízio
+    // Quando uma faixa termina: repete a faixa da fase (se fixada) ou rodízio
     void Update()
     {
         if (musicaLigada && !fonteMusica.isPlaying && musicas.Count > 0)
         {
-            musicaAtual = (musicaAtual + 1) % musicas.Count;
+            musicaAtual = (faixaFixa >= 0 && faixaFixa < musicas.Count)
+                          ? faixaFixa
+                          : (musicaAtual + 1) % musicas.Count;
             fonteMusica.clip = musicas[musicaAtual];
             fonteMusica.Play();
         }
@@ -101,6 +105,31 @@ public class GerenciadorDeAudio : MonoBehaviour
     }
 
     public static void PararMusica() { Obter().fonteMusica.Stop(); }
+
+    // Fixa uma faixa (0 = mais calma ... 4 = mais agitada) — usada pelas
+    // fases do jogo para acelerar a música conforme a dificuldade sobe.
+    // Passe -1 para voltar ao rodízio livre.
+    public static void TocarFaixa(int indice)
+    {
+        var g = Obter();
+        g.faixaFixa = indice;
+        if (indice < 0 || indice >= g.musicas.Count) return;
+        g.musicaAtual = indice;
+        if (g.musicaLigada)
+        {
+            g.fonteMusica.clip = g.musicas[indice];
+            g.fonteMusica.Play();
+        }
+    }
+
+    // Fanfarra de vitória (toca uma vez; depois volta a faixa atual)
+    public static void TocarMusicaVitoria()
+    {
+        var g = Obter();
+        if (!g.musicaLigada) return;
+        g.fonteMusica.clip = g.musicaVitoria;
+        g.fonteMusica.Play();
+    }
 
     // ── Síntese de som ───────────────────────────────────────────────────────
 
@@ -204,6 +233,16 @@ public class GerenciadorDeAudio : MonoBehaviour
             392f, 440f, 392f, 329.63f, 261.63f, 0, 261.63f, 0,
         },
         new[] { 130.81f, 110f, 98f, 130.81f }));
+
+        // Fanfarra de vitória: escala subindo + acordes triunfais
+        musicaVitoria = RenderizarMusica(0.16f, new[]
+        {
+            523.25f, 587.33f, 659.25f, 783.99f, 880f, 1046.5f, 0, 1046.5f,
+            0, 1046.5f, 0, 0, 783.99f, 880f, 1046.5f, 0,
+            1046.5f, 0, 880f, 0, 1046.5f, 0, 0, 0,
+            523.25f, 659.25f, 783.99f, 1046.5f, 0, 1046.5f, 1046.5f, 0,
+        },
+        new[] { 130.81f, 98f, 130.81f, 130.81f });
     }
 
     // Transforma um padrão de notas + baixo num clipe de áudio

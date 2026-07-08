@@ -40,6 +40,7 @@ public class MenuPrincipal : MonoBehaviour
 
     GameObject painelSenha;        // teclado numérico da área do professor
     TextMeshProUGUI displaySenha;
+    TextMeshProUGUI textoRecorde;  // "RECORDE: X" no menu
     string senhaDigitada = "";
 
     bool  menuAberto;
@@ -62,11 +63,12 @@ public class MenuPrincipal : MonoBehaviour
 
     void Update()
     {
-        // Quando o jogo termina ("FIM DO JOGO!"), espera 4s e volta ao menu
+        // Quando o jogo termina, espera e volta ao menu
+        // (na vitória espera mais: tempo de curtir os confetes!)
         if (!menuAberto && gerenciador != null && gerenciador.JogoTerminado)
         {
             timerFimDeJogo += Time.deltaTime;
-            if (timerFimDeJogo >= 4f) AbrirMenu();
+            if (timerFimDeJogo >= (gerenciador.Venceu ? 8f : 4f)) AbrirMenu();
         }
         else
         {
@@ -99,7 +101,7 @@ public class MenuPrincipal : MonoBehaviour
         rt.sizeDelta = Vector2.zero;
         telaMenu = fundo.gameObject;
 
-        // Estrelas decorativas (bolinhas em posições fixas sorteadas com semente)
+        // Estrelas decorativas cintilando (cada uma no seu ritmo)
         var sorteio = new System.Random(7);
         for (int i = 0; i < 45; i++)
         {
@@ -107,16 +109,38 @@ public class MenuPrincipal : MonoBehaviour
             float y    = (float)sorteio.NextDouble() * 1780f - 890f;
             float tam  = 4f + (float)sorteio.NextDouble() * 10f;
             float alfa = 0.25f + (float)sorteio.NextDouble() * 0.6f;
-            UIFabrica.CriarImagem(telaMenu.transform, "Estrela", new Color(1f, 1f, 1f, alfa),
+            var estrela = UIFabrica.CriarImagem(telaMenu.transform, "Estrela",
+                new Color(1f, 1f, 1f, alfa),
                 new Vector2(x, y), new Vector2(tam, tam), UIFabrica.Circulo());
+            estrela.gameObject.AddComponent<Cintilar>();
         }
 
         UIFabrica.CriarTexto(telaMenu.transform, "Titulo1", "DITADO",
             130f, COR_TITULO, new Vector2(0, 620), new Vector2(1000, 150));
         UIFabrica.CriarTexto(telaMenu.transform, "Titulo2", "ESTRELADO",
             130f, COR_TITULO, new Vector2(0, 480), new Vector2(1000, 150));
+
+        // Pontos de luz SOBRE o título, pulsando como estrelas no céu
+        for (int i = 0; i < 16; i++)
+        {
+            float x   = (float)sorteio.NextDouble() * 680f - 340f;
+            float y   = 425f + (float)sorteio.NextDouble() * 265f;
+            float tam = 5f + (float)sorteio.NextDouble() * 9f;
+            var brilho = UIFabrica.CriarImagem(telaMenu.transform, "BrilhoTitulo",
+                new Color(1f, 1f, 0.85f, 0.9f),
+                new Vector2(x, y), new Vector2(tam, tam), UIFabrica.Circulo());
+            brilho.raycastTarget = false;
+            var cintilar = brilho.gameObject.AddComponent<Cintilar>();
+            cintilar.alfaMinimo  = 0f;    // some completamente...
+            cintilar.escalaExtra = 0.8f;  // ...e volta inchando, bem "estrela"
+        }
+
         UIFabrica.CriarTexto(telaMenu.transform, "Subtitulo", "Aprenda o alfabeto em LIBRAS",
             46f, new Color(1f, 1f, 1f, 0.9f), new Vector2(0, 360), new Vector2(1000, 80), false);
+
+        // Recorde do jogador (salvo entre sessões; atualizado ao abrir o menu)
+        textoRecorde = UIFabrica.CriarTexto(telaMenu.transform, "Recorde", "",
+            36f, COR_TITULO, new Vector2(0, 295), new Vector2(700, 55));
 
         UIFabrica.CriarBotao(telaMenu.transform, "BotaoJogar", "JOGAR", COR_JOGAR,
             new Vector2(0, 60),   new Vector2(560, 130), 56f, controlador, Jogar);
@@ -131,14 +155,27 @@ public class MenuPrincipal : MonoBehaviour
             "Toque no botão ou aponte o dedo por 3 segundos",
             32f, new Color(1f, 1f, 1f, 0.7f), new Vector2(0, -460), new Vector2(1000, 60), false);
 
-        UIFabrica.CriarTexto(telaMenu.transform, "Creditos",
-            "Produzido por: Marcus Strabello\n" +
-            "Apresentado ao professor Dr. Alex Martins Santos\n" +
-            "da disciplina de Visão Computacional do Programa de\n" +
-            "Pós-Graduação em Computação Aplicada (PPGCA) do\n" +
-            "Instituto Federal do Maranhão (IFMA)\n" +
-            "Campus São Luís - Monte Castelo",
-            26f, new Color(1f, 1f, 1f, 0.6f), new Vector2(0, -680), new Vector2(980, 220), false);
+        // ── Créditos: cartão elegante com hierarquia visual ──
+        var cartaoCreditos = UIFabrica.CriarImagem(telaMenu.transform, "Creditos",
+            new Color(1f, 1f, 1f, 0.07f), new Vector2(0, -700), new Vector2(880, 260),
+            UIFabrica.Arredondado(), true);
+        cartaoCreditos.raycastTarget = false;
+        Transform cred = cartaoCreditos.transform;
+
+        // Linha separadora dourada no topo
+        UIFabrica.CriarImagem(cred, "Linha", new Color(1f, 0.85f, 0.25f, 0.5f),
+            new Vector2(0, 108), new Vector2(320, 4), UIFabrica.Arredondado(), true);
+
+        UIFabrica.CriarTexto(cred, "L1", "produzido por",
+            24f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, 74), new Vector2(840, 34), false);
+        UIFabrica.CriarTexto(cred, "L2", "MARCUS STRABELLO",
+            40f, Color.white, new Vector2(0, 34), new Vector2(840, 52));
+        UIFabrica.CriarTexto(cred, "L3", "Orientação: Prof. Dr. Alex Martins Santos",
+            27f, new Color(1f, 1f, 1f, 0.8f), new Vector2(0, -18), new Vector2(840, 40), false);
+        UIFabrica.CriarTexto(cred, "L4", "Visão Computacional  •  PPGCA  •  IFMA",
+            26f, new Color(1f, 0.85f, 0.25f, 0.85f), new Vector2(0, -58), new Vector2(840, 38), false);
+        UIFabrica.CriarTexto(cred, "L5", "Campus São Luís - Monte Castelo",
+            23f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, -94), new Vector2(840, 34), false);
     }
 
     void ConstruirHud()
@@ -348,6 +385,13 @@ public class MenuPrincipal : MonoBehaviour
         telaMenu.SetActive(true);
         telaMenu.transform.SetAsLastSibling(); // menu por cima de tudo
         if (painelSenha != null) painelSenha.SetActive(false);
+
+        // Atualiza o recorde exibido (pode ter acabado de bater um novo!)
+        if (textoRecorde != null)
+        {
+            int recorde = PlayerPrefs.GetInt("recorde", 0);
+            textoRecorde.text = recorde > 0 ? "RECORDE: " + recorde : "";
+        }
         if (botaoSom    != null) botaoSom.transform.SetAsLastSibling(); // som clicável até no menu
         botaoMenuHud.SetActive(false);
         dicaTreinamento.SetActive(false);

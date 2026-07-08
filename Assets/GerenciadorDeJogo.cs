@@ -26,19 +26,27 @@ public class GerenciadorDeJogo : MonoBehaviour
     public class FaseDoJogo
     {
         public string nome;
-        public float  segundosPorLetra = 10f; // tempo da palavra = isto × nº de letras
+        public float  tempoPorPalavra = 20f; // segundos para soletrar cada palavra
         public List<ItemDePalavra> itens = new List<ItemDePalavra>();
     }
 
     [Header("Fases (vazio = usa as fases padrao do codigo)")]
     public List<FaseDoJogo> fases = new List<FaseDoJogo>();
 
+    // Quando as fases padrão do código mudam, este número sobe e a cena
+    // esquece a versão antiga que tinha memorizado
+    const int VERSAO_DAS_FASES = 2;
+    public int versaoDasFases = 0;
+
+    // Música por fase: índice da faixa (0 = calma ... 4 = agitada)
+    public int[] faixaMusicalPorFase = { 0, 1, 3, 4 };
+
     [Header("Ponto de exibicao do objeto 3D")]
     public Transform pontoDeExibicao;
 
     [Header("Aparencia do objeto 3D")]
     public float   tamanhoDoObjeto = 4.2f; // tamanho no mundo (auto-ajuste mede e aplica)
-    public Vector3 rotacaoObjeto   = new Vector3(-20f, 160f, 0f);
+    public Vector3 rotacaoObjeto   = new Vector3(0f, 160f, 0f); // só gira no eixo Y
 
     [Header("Pontuacao e economia")]
     public int pontosPorLetra    = 10;
@@ -59,6 +67,9 @@ public class GerenciadorDeJogo : MonoBehaviour
     public System.Action<int>    OnPontuacaoAtualizada;
     public System.Action<int>    OnVidasAtualizadas;
     public System.Action<string> OnNovaFase;
+    public System.Action<int>    OnPontosGastos;  // animação "-5"/"-10" na tela
+    public System.Action         OnLetraCorreta;  // flash verde (feedback visual)
+    public System.Action         OnVidaPerdida;   // flash vermelho
 
     // ── Estado interno ───────────────────────────────────────────────────────
     private List<ItemDePalavra> listaEmbaralhada;
@@ -104,8 +115,11 @@ public class GerenciadorDeJogo : MonoBehaviour
 
     void Awake()
     {
-        if (fases == null || fases.Count == 0)
+        if (fases == null || fases.Count == 0 || versaoDasFases != VERSAO_DAS_FASES)
+        {
             fases = CriarFasesPadrao();
+            versaoDasFases = VERSAO_DAS_FASES;
+        }
     }
 
     // ── Relógio da palavra ───────────────────────────────────────────────────
@@ -156,7 +170,12 @@ public class GerenciadorDeJogo : MonoBehaviour
         listaEmbaralhada = new List<ItemDePalavra>(fase.itens);
         Embaralhar(listaEmbaralhada);
         indicePalavra = 0;
-        OnNovaFase?.Invoke("FASE " + (faseAtual + 1) + "\n" + fase.nome);
+        OnNovaFase?.Invoke("FASE " + (faseAtual + 1));
+
+        // Música fica mais agitada a cada fase
+        int faixa = faixaMusicalPorFase[Mathf.Min(faseAtual, faixaMusicalPorFase.Length - 1)];
+        GerenciadorDeAudio.TocarFaixa(faixa);
+
         ExibirItemAtual();
     }
 
@@ -191,14 +210,42 @@ public class GerenciadorDeJogo : MonoBehaviour
         }
 
         Vector3 pos = pontoDeExibicao != null ? pontoDeExibicao.position : Vector3.zero;
-        objetoAtual = Instantiate(prefab, pos, Quaternion.Euler(rotacaoObjeto));
+
+        // IMPORTANTE: multiplica pela rotação ORIGINAL do modelo — muitos FBX
+        // trazem uma correção de eixo embutida (ignorá-la deixava alguns
+        // modelos de cabeça para baixo!)
+        Quaternion rotacao = Quaternion.Euler(rotacaoObjeto) * prefab.transform.rotation;
+        objetoAtual = Instantiate(prefab, pos, rotacao);
+
         AjustarTamanhoECentro(objetoAtual, item.escala, pos);
         objetoAtual.AddComponent<Flutuar>(); // balanço suave, como se boiasse
+        TocarAnimacaoSeExistir(objetoAtual); // animais animados ganham vida!
 
         indiceLetra   = 0;
-        tempoRestante = Mathf.Max(12f, fases[faseAtual].segundosPorLetra * item.palavra.Length);
+        tempoRestante = fases[faseAtual].tempoPorPalavra; // reinicia a cada palavra
         Debug.Log("Palavra: [" + item.palavra + "] — " +
                   Mathf.RoundToInt(tempoRestante) + "s para soletrar");
+    }
+
+    // Se o modelo tem animações (importadas como Legacy), toca em loop —
+    // prefere um clipe chamado "Idle" se existir
+    void TocarAnimacaoSeExistir(GameObject go)
+    {
+        var animacao = go.GetComponentInChildren<Animation>();
+        if (animacao == null) return;
+
+        string escolhido = null;
+        foreach (AnimationState estado in animacao)
+        {
+            estado.wrapMode = WrapMode.Loop;
+            if (escolhido == null) escolhido = estado.name;
+            if (estado.name.ToLower().Contains("idle")) escolhido = estado.name;
+        }
+        if (escolhido != null)
+        {
+            animacao.wrapMode = WrapMode.Loop;
+            animacao.Play(escolhido);
+        }
     }
 
     // Auto-ajuste: mede o modelo (bounds) e o redimensiona para
@@ -258,6 +305,7 @@ public class GerenciadorDeJogo : MonoBehaviour
         {
             GerenciadorDeAudio.TocarAcerto();
         }
+        OnLetraCorreta?.Invoke(); // flash verde na tela
         return true;
     }
 
@@ -277,8 +325,9 @@ public class GerenciadorDeJogo : MonoBehaviour
             // Completou TODAS as fases: vitória!
             Venceu    = true;
             fimDeJogo = true;
+            SalvarRecorde();
             if (objetoAtual != null) Destroy(objetoAtual);
-            GerenciadorDeAudio.TocarVitoria();
+            GerenciadorDeAudio.TocarMusicaVitoria(); // fanfarra completa!
             Debug.Log("VENCEU O JOGO! Pontuacao final: " + pontuacao);
             return;
         }
@@ -290,11 +339,13 @@ public class GerenciadorDeJogo : MonoBehaviour
     {
         vidas--;
         OnVidasAtualizadas?.Invoke(vidas);
+        OnVidaPerdida?.Invoke(); // flash vermelho na tela
         GerenciadorDeAudio.TocarErro();
 
         if (vidas <= 0)
         {
             fimDeJogo = true;
+            SalvarRecorde();
             if (objetoAtual != null) Destroy(objetoAtual);
             Debug.Log("Fim de jogo (acabaram as vidas). Pontuacao: " + pontuacao);
             return;
@@ -318,6 +369,7 @@ public class GerenciadorDeJogo : MonoBehaviour
             return;
         }
         AdicionarPontos(-custoPularPalavra);
+        OnPontosGastos?.Invoke(custoPularPalavra); // animação "-10" na tela
         GerenciadorDeAudio.TocarClique();
         StopAllCoroutines();
         aguardandoCelebracao = false;
@@ -337,6 +389,7 @@ public class GerenciadorDeJogo : MonoBehaviour
             return;
         }
         AdicionarPontos(-custoPularLetra);
+        OnPontosGastos?.Invoke(custoPularLetra); // animação "-5" na tela
         GerenciadorDeAudio.TocarClique();
 
         if (indiceLetra < PalavraAtual.Length - 1)
@@ -381,6 +434,17 @@ public class GerenciadorDeJogo : MonoBehaviour
         }
     }
 
+    // Guarda o recorde entre sessões (mostrado no menu)
+    void SalvarRecorde()
+    {
+        int recorde = PlayerPrefs.GetInt("recorde", 0);
+        if (pontuacao > recorde)
+        {
+            PlayerPrefs.SetInt("recorde", pontuacao);
+            Debug.Log("NOVO RECORDE: " + pontuacao);
+        }
+    }
+
     // ── As fases padrão do jogo ──────────────────────────────────────────────
     static List<FaseDoJogo> CriarFasesPadrao()
     {
@@ -397,7 +461,7 @@ public class GerenciadorDeJogo : MonoBehaviour
         {
             new FaseDoJogo
             {
-                nome = "FRUTAS", segundosPorLetra = 12f,
+                nome = "FRUTAS", tempoPorPalavra = 25f,
                 itens = new List<ItemDePalavra>
                 {
                     Item("MAÇA",     FRUTAS + "apple"),
@@ -414,7 +478,7 @@ public class GerenciadorDeJogo : MonoBehaviour
             },
             new FaseDoJogo
             {
-                nome = "ANIMAIS", segundosPorLetra = 10f,
+                nome = "ANIMAIS", tempoPorPalavra = 20f,
                 itens = new List<ItemDePalavra>
                 {
                     Item("VACA",     FAZENDA  + "Cow"),
@@ -433,7 +497,7 @@ public class GerenciadorDeJogo : MonoBehaviour
             },
             new FaseDoJogo
             {
-                nome = "TRANSPORTE", segundosPorLetra = 9f,
+                nome = "TRANSPORTE", tempoPorPalavra = 15f,
                 itens = new List<ItemDePalavra>
                 {
                     Item("ONIBUS",     TRANSPORTE + "Bus"),
@@ -446,7 +510,7 @@ public class GerenciadorDeJogo : MonoBehaviour
             },
             new FaseDoJogo
             {
-                nome = "COMIDAS", segundosPorLetra = 8f,
+                nome = "COMIDAS", tempoPorPalavra = 10f,
                 itens = new List<ItemDePalavra>
                 {
                     Item("PIZZA",        COMIDA + "Pizza"),

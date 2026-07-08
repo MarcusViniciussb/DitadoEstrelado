@@ -33,6 +33,8 @@ public class UIControle : MonoBehaviour
         new System.Collections.Generic.List<GameObject>();
     private GameObject      chipTempo;
     private TextMeshProUGUI textoTempo;
+    private Transform       raizCanvas;   // raiz do Canvas (para confetes/flashes)
+    private Image           flashTela;    // flash verde/vermelho (feedback visual)
     private static readonly Color COR_VIDA        = new Color(0.95f, 0.25f, 0.35f, 1f);
     private static readonly Color COR_TEMPO_OK    = Color.white;
     private static readonly Color COR_TEMPO_FIM   = new Color(1f, 0.35f, 0.25f, 1f);
@@ -99,7 +101,16 @@ public class UIControle : MonoBehaviour
         barraSinal = fundoBarra.gameObject;
         barraSinal.SetActive(false);
 
-        var raizCanvas = GetComponentInParent<Canvas>().transform;
+        raizCanvas = GetComponentInParent<Canvas>().transform;
+
+        // Flash de tela: feedback VISUAL de acerto (verde) e erro (vermelho).
+        // Essencial para o público surdo — os sons têm gêmeos visuais!
+        flashTela = UIFabrica.CriarImagem(raizCanvas, "FlashTela",
+            new Color(0f, 0f, 0f, 0f), Vector2.zero, Vector2.zero);
+        flashTela.rectTransform.anchorMin = Vector2.zero;
+        flashTela.rectTransform.anchorMax = Vector2.one;
+        flashTela.rectTransform.sizeDelta = Vector2.zero;
+        flashTela.raycastTarget = false;
 
         // Chip de VIDAS (corações), abaixo da pontuação
         var vidasChip = UIFabrica.CriarImagem(raizCanvas, "ChipVidas",
@@ -147,6 +158,9 @@ public class UIControle : MonoBehaviour
         gerenciador.OnPontuacaoAtualizada -= AtualizarScore;
         gerenciador.OnVidasAtualizadas    -= AtualizarVidas;
         gerenciador.OnNovaFase            -= MostrarFase;
+        gerenciador.OnPontosGastos        -= MostrarPontosGastos;
+        gerenciador.OnLetraCorreta        -= FlashVerde;
+        gerenciador.OnVidaPerdida         -= FlashVermelho;
         inscrito = false;
     }
 
@@ -157,7 +171,55 @@ public class UIControle : MonoBehaviour
         gerenciador.OnPontuacaoAtualizada += AtualizarScore;
         gerenciador.OnVidasAtualizadas    += AtualizarVidas;
         gerenciador.OnNovaFase            += MostrarFase;
+        gerenciador.OnPontosGastos        += MostrarPontosGastos;
+        gerenciador.OnLetraCorreta        += FlashVerde;
+        gerenciador.OnVidaPerdida         += FlashVermelho;
         inscrito = true;
+    }
+
+    void FlashVerde()    { StartCoroutine(RotinaDeFlash(new Color(0.2f, 0.9f, 0.3f, 0.30f))); }
+    void FlashVermelho() { StartCoroutine(RotinaDeFlash(new Color(0.95f, 0.2f, 0.2f, 0.40f))); }
+
+    IEnumerator RotinaDeFlash(Color cor)
+    {
+        if (flashTela == null) yield break;
+        float duracao = 0.45f;
+        for (float t = 0f; t < duracao; t += Time.deltaTime)
+        {
+            var c = cor;
+            c.a = Mathf.Lerp(cor.a, 0f, t / duracao);
+            flashTela.color = c;
+            yield return null;
+        }
+        flashTela.color = new Color(0, 0, 0, 0);
+    }
+
+    // Animação "-5"/"-10" em vermelho subindo perto da pontuação
+    void MostrarPontosGastos(int valor)
+    {
+        StartCoroutine(RotinaPontosGastos(valor));
+    }
+
+    IEnumerator RotinaPontosGastos(int valor)
+    {
+        var texto = UIFabrica.CriarTexto(raizCanvas, "PontosGastos", "-" + valor,
+            52f, new Color(0.95f, 0.2f, 0.2f, 1f), new Vector2(200, -70), new Vector2(200, 80));
+        UIFabrica.Ancorar(texto, new Vector2(0f, 1f), new Vector2(0f, 1f));
+
+        var rt = (RectTransform)texto.transform;
+        Vector2 inicio = rt.anchoredPosition;
+        float duracao = 1.1f;
+
+        for (float t = 0f; t < duracao; t += Time.deltaTime)
+        {
+            float p = t / duracao;
+            rt.anchoredPosition = inicio + new Vector2(0f, 90f * p); // sobe
+            var c = texto.color;
+            c.a = 1f - p;                                            // some
+            texto.color = c;
+            yield return null;
+        }
+        Destroy(texto.gameObject);
     }
 
     void AtualizarVidas(int vidas)
@@ -234,7 +296,8 @@ public class UIControle : MonoBehaviour
                 if (gerenciador.Venceu)
                 {
                     tmp.color = COR_CELEBRACAO;
-                    tmp.text  = "VOCÊ VENCEU!";
+                    tmp.text  = "PARABÉNS!\nVOCÊ VENCEU!";
+                    ChuvaDeConfetes.Lancar(raizCanvas); // 🎉
                 }
                 else
                 {
@@ -330,6 +393,9 @@ public class UIControle : MonoBehaviour
         if (string.IsNullOrEmpty(palavra)) { tmp.text = ""; return; }
 
         rotulo.gameObject.SetActive(true);
+        // Mostra o NOME do objeto (não é trapaça: soletrar em LIBRAS é o desafio,
+        // e ler a palavra escrita é justamente a parte de alfabetização!)
+        rotulo.text = "PALAVRA:  " + palavra;
         tmp.color = COR_NORMAL;
 
         var sb = new StringBuilder();
