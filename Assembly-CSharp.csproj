@@ -74,6 +74,7 @@
     <Compile Include="Assets\TutorialInfo\Scripts\Readme.cs" />
     <Compile Include="Assets\MenuPrincipal.cs" />
     <Compile Include="Assets\ReproduzirAnimacao.cs" />
+    <Compile Include="Assets\RespirarSuave.cs" />
     <Compile Include="Assets\UIFabrica.cs" />
     <Compile Include="Assets\VisualizadorMaoUI.cs" />
     <Compile Include="Assets\GerenciadorDeAudio.cs" />

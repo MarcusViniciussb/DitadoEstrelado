@@ -220,6 +220,7 @@ public class GerenciadorDeJogo : MonoBehaviour
         objetoAtual = Instantiate(prefab, pos, rotacao);
 
         CorrigirMateriaisParaURP(objetoAtual);                    // sem materiais rosas/brancos
+        PintarPorNomeDeMaterial(objetoAtual, prefab.name);        // devolve as cores perdidas
         AplicarTexturaSeDefinida(objetoAtual, item.caminhoTextura);
         AjustarTamanhoECentro(objetoAtual, item.escala, pos);
         objetoAtual.AddComponent<Flutuar>();                      // balanço suave, como se boiasse
@@ -254,6 +255,57 @@ public class GerenciadorDeJogo : MonoBehaviour
                 material.shader = urp;
                 material.SetColor("_BaseColor", cor);
                 if (tex != null) material.SetTexture("_BaseMap", tex);
+            }
+    }
+
+    // O pacote de transporte foi exportado SEM as cores (todos os materiais
+    // vieram cinza 0.64) — mas os NOMES dos materiais revelam a cor que o
+    // artista queria ("Red", "Windows", "Wheel"...). Pintamos por nome.
+    // Chave "Modelo:Material" tem prioridade sobre a chave só do material.
+    static readonly Dictionary<string, Color> CORES_POR_NOME = new Dictionary<string, Color>
+    {
+        // Genéricos (qualquer modelo)
+        { "Red",     new Color(0.85f, 0.15f, 0.15f) },
+        { "White",   new Color(0.95f, 0.95f, 0.95f) },
+        { "Green",   new Color(0.15f, 0.75f, 0.25f) },
+        { "Yellow",  new Color(1f,    0.80f, 0.10f) },
+        { "Black",   new Color(0.08f, 0.08f, 0.08f) },
+        { "Grey",    new Color(0.55f, 0.55f, 0.55f) },
+        { "Lights",  new Color(1f,    0.95f, 0.60f) }, // faróis
+        { "Windows", new Color(0.55f, 0.80f, 0.95f) }, // vidro azulado
+        { "Bumper",  new Color(0.30f, 0.30f, 0.32f) },
+        { "Wheel",   new Color(0.12f, 0.12f, 0.12f) }, // pneu
+        { "Details", new Color(0.40f, 0.40f, 0.42f) },
+        { "Handle",  new Color(0.15f, 0.15f, 0.15f) },
+
+        // Específicos por modelo
+        { "Bicycle:Bike",          new Color(0.80f, 0.20f, 0.20f) }, // quadro vermelho
+        { "Bicycle:Material.003",  new Color(0.50f, 0.50f, 0.52f) },
+        { "Bus:Top",               new Color(0.95f, 0.95f, 0.95f) },
+        { "Bus:Bottom",            new Color(0.20f, 0.45f, 0.85f) }, // ônibus azul
+        { "Bus:Material",          new Color(0.35f, 0.35f, 0.38f) },
+        { "Train:Outside",         new Color(0.75f, 0.20f, 0.20f) }, // trem vermelho
+        { "Train:Top",             new Color(0.85f, 0.85f, 0.88f) },
+        { "Ambulance:Material",    new Color(0.95f, 0.95f, 0.95f) },
+        { "TrafficLight:TrafficLight", new Color(0.20f, 0.20f, 0.22f) }, // poste
+    };
+
+    static void PintarPorNomeDeMaterial(GameObject go, string nomeModelo)
+    {
+        foreach (var renderizador in go.GetComponentsInChildren<Renderer>())
+            foreach (var material in renderizador.materials)
+            {
+                if (material == null) continue;
+                string nome = material.name.Replace(" (Instance)", "").Trim();
+
+                Color cor;
+                if (CORES_POR_NOME.TryGetValue(nomeModelo + ":" + nome, out cor) ||
+                    CORES_POR_NOME.TryGetValue(nome, out cor))
+                {
+                    material.color = cor;
+                    if (material.HasProperty("_BaseColor"))
+                        material.SetColor("_BaseColor", cor);
+                }
             }
     }
 
