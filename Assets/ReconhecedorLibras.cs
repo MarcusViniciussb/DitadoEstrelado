@@ -17,7 +17,7 @@ public class ReconhecedorLibras : MonoBehaviour
     [Range(0f, 3f)] public float pesoDosAngulos = 0.5f; // importância dos ângulos vs posições
 
     [Header("Letras dinamicas (gravadas como MOVIMENTO, nao como foto)")]
-    // (campo renomeado para o Unity aplicar a lista nova — W e Ç também se movem)
+    // (campo renomeado para o Unity aplicar a lista nova - W e Ç também se movem)
     public string[] letrasComMovimento = { "H", "J", "K", "W", "X", "Z", "Ç" };
     public float toleranciaDinamica = 4.5f; // mesmo esquema: sobe = aceita mais facil
 
@@ -30,7 +30,7 @@ public class ReconhecedorLibras : MonoBehaviour
 
     // ── Ângulos das articulações ─────────────────────────────────────────────
     // Cada trio (a, b, c) mede o ângulo NO ponto b entre os vetores (a-b) e (c-b).
-    // Ângulo não muda quando a mão gira ou muda de tamanho → complementa as posições.
+    // Ângulo não muda quando a mão gira ou muda de tamanho -> complementa as posições.
     private static readonly int[,] TRIOS =
     {
         // Polegar
@@ -45,7 +45,7 @@ public class ReconhecedorLibras : MonoBehaviour
         {0,17,18}, {17,18,19},{18,19,20},
     };
 
-    // Abertura entre dedos vizinhos: ângulo entre os vetores pulso→base de cada dedo
+    // Abertura entre dedos vizinhos: ângulo entre os vetores pulso->base de cada dedo
     private static readonly int[,] PARES_ABERTURA =
     {
         {1,5}, {5,9}, {9,13}, {13,17}
@@ -91,11 +91,11 @@ public class ReconhecedorLibras : MonoBehaviour
     public bool mostrarDebug = false;
     private float tempoUltimoDebug = 0f;
 
-    // Distância da última classificação — quanto MENOR, mais parecido o sinal
+    // Distância da última classificação - quanto MENOR, mais parecido o sinal
     // está com o gravado (o ControladorCamera usa para aceitar mais rápido)
     public float UltimaDistancia { get; private set; } = float.MaxValue;
 
-    // Resumo tipo "A: 7   B: 5   C: 4" — mostrado na tela de treinamento
+    // Resumo tipo "A: 7   B: 5   C: 4" - mostrado na tela de treinamento
     public string ResumoDoBanco()
     {
         if (bancoDeDados == null || bancoDeDados.letrasGravadas.Count == 0)
@@ -125,7 +125,7 @@ public class ReconhecedorLibras : MonoBehaviour
         return sb.ToString().TrimEnd();
     }
 
-    // Normaliza pontos (relativos ao pulso) pelo TAMANHO da mão — a distância
+    // Normaliza pontos (relativos ao pulso) pelo TAMANHO da mão - a distância
     // do pulso até a base do dedo médio (ponto 9). Assim a mesma letra é
     // reconhecida perto OU longe da câmera, pois a escala deixa de importar.
     // Os dados já gravados continuam válidos: eles também passam por aqui.
@@ -141,7 +141,7 @@ public class ReconhecedorLibras : MonoBehaviour
     }
 
     // Grava UMA amostra da letra. Pode chamar várias vezes para a mesma letra
-    // — quanto mais amostras, melhor o reconhecimento.
+    // - quanto mais amostras, melhor o reconhecimento.
     public void GravarLetra(string nomeDaLetra, Vector3[] pontosAtuais)
     {
         if (bancoDeDados == null)
@@ -296,7 +296,7 @@ public class ReconhecedorLibras : MonoBehaviour
             string nome = candidatos[i].Value;
             votos[nome] = votos.ContainsKey(nome) ? votos[nome] + 1 : 1;
             if (!melhorDistDaLetra.ContainsKey(nome))
-                melhorDistDaLetra[nome] = candidatos[i].Key; // lista ordenada → 1ª é a menor
+                melhorDistDaLetra[nome] = candidatos[i].Key; // lista ordenada -> 1ª é a menor
         }
 
         string vencedora = "";
@@ -386,7 +386,7 @@ public class ReconhecedorLibras : MonoBehaviour
     }
 
     // DTW (Dynamic Time Warping): alinha duas sequências no tempo antes de
-    // comparar — o MESMO gesto feito mais rápido ou mais devagar ainda casa.
+    // comparar - o MESMO gesto feito mais rápido ou mais devagar ainda casa.
     // Retorna o custo médio por passo (independe do tamanho das sequências).
     static float CustoDTW(List<Vector3[]> a, List<Vector3[]> b)
     {

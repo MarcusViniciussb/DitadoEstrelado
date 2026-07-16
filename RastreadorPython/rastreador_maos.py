@@ -5,7 +5,7 @@ Rastreador de maos com MediaPipe (Google) para o DitadoEstrelado.
 Roda 100% OFFLINE: captura a webcam, detecta os 21 pontos da mao com o
 pipeline completo do MediaPipe (deteccao de palma + landmarks + rastreamento
 temporal) e envia tudo para o Unity por UDP em 127.0.0.1 (comunicacao interna
-do proprio PC — nao usa internet).
+do proprio PC - nao usa internet).
 
 Como usar: execute EXECUTAR_RASTREADOR.bat (na pasta do projeto) ANTES de
 dar Play no Unity. Se este script nao estiver rodando, o jogo usa o
@@ -61,7 +61,7 @@ def principal():
 
     # CAP_DSHOW abre a camera mais rapido no Windows
     camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    # MJPG: formato comprimido — sem ele, muitas webcams travam em 10fps no 720p
+    # MJPG: formato comprimido - sem ele, muitas webcams travam em 10fps no 720p
     camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     camera.set(cv2.CAP_PROP_FRAME_WIDTH,  LARGURA_CAPTURA)
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, ALTURA_CAPTURA)

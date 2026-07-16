@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// RespirarSuave: dá "vida" a modelos SEM animação — o corpo infla e
+// RespirarSuave: dá "vida" a modelos SEM animação - o corpo infla e
 // desinfla de leve, como uma respiração calma. Usado como plano B
 // quando o modelo não tem clipes de animação (ex: Farm Animals).
 public class RespirarSuave : MonoBehaviour

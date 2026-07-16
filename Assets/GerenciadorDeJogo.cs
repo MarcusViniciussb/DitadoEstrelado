@@ -71,7 +71,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     public System.Action<int>    OnPontosGastos;  // animação "-5"/"-10" na tela
     public System.Action         OnLetraCorreta;  // flash verde (feedback visual)
     public System.Action         OnVidaPerdida;   // flash vermelho
-    public System.Action         OnVidaGanha;     // animação "+1 ❤" na tela
+    public System.Action         OnVidaGanha;     // animação "+1 coracao" na tela
     public System.Action         OnSemSaldo;      // tremida vermelha na pontuação
 
     // ── Estado interno ───────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ public class GerenciadorDeJogo : MonoBehaviour
 
         Vector3 pos = pontoDeExibicao != null ? pontoDeExibicao.position : Vector3.zero;
 
-        // IMPORTANTE: multiplica pela rotação ORIGINAL do modelo — muitos FBX
+        // IMPORTANTE: multiplica pela rotação ORIGINAL do modelo - muitos FBX
         // trazem uma correção de eixo embutida (ignorá-la deixava alguns
         // modelos de cabeça para baixo!)
         Quaternion rotacao = Quaternion.Euler(rotacaoObjeto) * prefab.transform.rotation;
@@ -241,7 +241,7 @@ public class GerenciadorDeJogo : MonoBehaviour
 
         indiceLetra   = 0;
         tempoRestante = fases[faseAtual].tempoPorPalavra; // reinicia a cada palavra
-        Debug.Log("Palavra: [" + item.palavra + "] — " +
+        Debug.Log("Palavra: [" + item.palavra + "] - " +
                   Mathf.RoundToInt(tempoRestante) + "s para soletrar");
     }
 
@@ -269,7 +269,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     }
 
     // O pacote de transporte foi exportado SEM as cores (todos os materiais
-    // vieram cinza 0.64) — mas os NOMES dos materiais revelam a cor que o
+    // vieram cinza 0.64) - mas os NOMES dos materiais revelam a cor que o
     // artista queria ("Red", "Windows", "Wheel"...). Pintamos por nome.
     // Chave "Modelo:Material" tem prioridade sobre a chave só do material.
     static readonly Dictionary<string, Color> CORES_POR_NOME = new Dictionary<string, Color>
@@ -320,7 +320,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     }
 
     // Alguns modelos (comidas) têm a textura num arquivo separado que o
-    // importador não conecta sozinho — aplicamos manualmente
+    // importador não conecta sozinho - aplicamos manualmente
     static void AplicarTexturaSeDefinida(GameObject go, string caminhoTextura)
     {
         if (string.IsNullOrEmpty(caminhoTextura)) return;
@@ -343,7 +343,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     }
 
     // Auto-ajuste: mede o modelo (bounds) e o redimensiona para
-    // 'tamanhoDoObjeto'; depois centraliza — muitos modelos têm a origem
+    // 'tamanhoDoObjeto'; depois centraliza - muitos modelos têm a origem
     // nos "pés", o que os deixaria flutuando alto na tela
     void AjustarTamanhoECentro(GameObject go, float escalaManual, Vector3 centroDesejado)
     {
@@ -498,6 +498,26 @@ public class GerenciadorDeJogo : MonoBehaviour
             indicePalavra++;
             ExibirItemAtual();
         }
+    }
+
+    // ── Supercontrole do apresentador (setas do teclado, SEM custo) ──────────
+    // Útil em demonstrações: navega pelas palavras sem gastar pontos.
+
+    public void AvancarPalavraGratis()
+    {
+        if (!JogoIniciado || Pausado || fimDeJogo || aguardandoCelebracao) return;
+        GerenciadorDeAudio.TocarClique();
+        indicePalavra++;
+        ExibirItemAtual();
+    }
+
+    public void VoltarPalavraGratis()
+    {
+        if (!JogoIniciado || Pausado || fimDeJogo || aguardandoCelebracao) return;
+        if (indicePalavra == 0) return; // já está na primeira palavra da fase
+        GerenciadorDeAudio.TocarClique();
+        indicePalavra--;
+        ExibirItemAtual();
     }
 
     // Volta uma letra (de graça)

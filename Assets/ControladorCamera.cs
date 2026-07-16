@@ -28,7 +28,7 @@ public class ControladorCamera : MonoBehaviour
     public bool MODO_TREINAMENTO = true;
     public GerenciadorDeJogo gerenciador; // Arraste o GameObject que tem GerenciadorDeJogo aqui
 
-    [Header("Rastreador externo (Python/MediaPipe) — opcional")]
+    [Header("Rastreador externo (Python/MediaPipe) - opcional")]
     // Se o script RastreadorPython estiver rodando, usa o MediaPipe completo
     // (muito melhor). Senão, cai automaticamente no rastreador interno.
     public RastreadorExterno rastreadorExterno;
@@ -76,7 +76,7 @@ public class ControladorCamera : MonoBehaviour
 
     [Header("Zoom inteligente (2 estagios, como o MediaPipe original)")]
     // Em vez de mandar o frame INTEIRO espremido para a IA, recorta um quadrado
-    // ao redor da última posição da mão — a mão chega grande e nítida ao modelo.
+    // ao redor da última posição da mão - a mão chega grande e nítida ao modelo.
     // Se algo ficar estranho, desligue aqui para voltar ao comportamento antigo.
     public bool zoomInteligente = true;
     [Range(1.5f, 4f)] public float margemDoZoom = 2.4f; // recorte = tamanho da mão × margem
@@ -98,7 +98,7 @@ public class ControladorCamera : MonoBehaviour
     private int larguraTelaAnterior = 0;
     private int alturaTelaAnterior = 0;
 
-    // Pontos da mão atuais — lidos pelo VisualizadorMaoUI para desenhar o esqueleto
+    // Pontos da mão atuais - lidos pelo VisualizadorMaoUI para desenhar o esqueleto
     public Vector3[] PontosDaMaoAtuais { get; private set; }
     public bool MaoDetectada { get; private set; }
 
@@ -138,7 +138,7 @@ public class ControladorCamera : MonoBehaviour
             if (rastreadorExterno.Ativo)
             {
                 usandoExterno = true;
-                Debug.Log("Rastreador EXTERNO ja estava rodando — conectado!");
+                Debug.Log("Rastreador EXTERNO ja estava rodando - conectado!");
                 yield break;
             }
             yield return null;
@@ -200,7 +200,7 @@ public class ControladorCamera : MonoBehaviour
         }
 
         if (!morreu)
-            Debug.Log("Rastreador externo nao respondeu a tempo — usando o rastreador interno.");
+            Debug.Log("Rastreador externo nao respondeu a tempo - usando o rastreador interno.");
         EncerrarProcessoDoRastreador(); // não deixa processo órfão segurando a câmera
         IniciarCameraInterna();
     }
@@ -212,7 +212,7 @@ public class ControladorCamera : MonoBehaviour
     void IniciarProcessoDoRastreador()
     {
         // Pasta RastreadorPython: fica na raiz do projeto (no Editor) ou ao
-        // lado do executável (num build) — os dois casos são o pai de dataPath
+        // lado do executável (num build) - os dois casos são o pai de dataPath
         string raiz   = System.IO.Directory.GetParent(Application.dataPath).FullName;
         string pasta  = System.IO.Path.Combine(raiz, "RastreadorPython");
         string script = System.IO.Path.Combine(pasta, "rastreador_maos.py");
@@ -245,7 +245,7 @@ public class ControladorCamera : MonoBehaviour
                 Debug.Log("Rastreador Python iniciado em segundo plano: " + executavel);
                 return;
             }
-            catch { /* esse executavel nao funcionou — tenta o proximo */ }
+            catch { /* esse executavel nao funcionou - tenta o proximo */ }
         }
         Debug.LogWarning("Rastreador: Python nao encontrado no PC. " +
                          "Abra EXECUTAR_RASTREADOR.bat manualmente ou instale o Python.");
@@ -253,7 +253,7 @@ public class ControladorCamera : MonoBehaviour
 
     // Lista de possíveis executáveis do Python, do mais confiável ao menos.
     // IMPORTANTE: os atalhos "py"/"python" do PATH podem ser aliases especiais
-    // do Windows (WindowsApps) que FALHAM quando abertos pelo Unity — por isso
+    // do Windows (WindowsApps) que FALHAM quando abertos pelo Unity - por isso
     // procuramos primeiro o python.exe REAL nas pastas de instalação.
     IEnumerable<string> CandidatosAPython()
     {
@@ -326,7 +326,7 @@ public class ControladorCamera : MonoBehaviour
     }
 
     // Aguarda câmera ter dimensões reais antes de criar o detector.
-    // WebCamTexture começa com 16x16 de placeholder — criar o detector nesse momento causaria crash.
+    // WebCamTexture começa com 16x16 de placeholder - criar o detector nesse momento causaria crash.
     IEnumerator InicializarDetetiveAposCamera()
     {
         Debug.Log("Aguardando camera inicializar...");
@@ -355,7 +355,7 @@ public class ControladorCamera : MonoBehaviour
         if (!usandoExterno && !detetivePronto) return;
 
         // Input SEMPRE antes de qualquer return.
-        // GetKeyDown só existe por 1 frame — se ficar atrás de um return, some para sempre.
+        // GetKeyDown só existe por 1 frame - se ficar atrás de um return, some para sempre.
         if (MODO_TREINAMENTO)
         {
             bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -376,7 +376,7 @@ public class ControladorCamera : MonoBehaviour
                     StartCoroutine(GravarComAtraso(letra));          // grava a FOTO
             }
 
-            // Ç não existe no enum de teclas do Unity — no teclado brasileiro
+            // Ç não existe no enum de teclas do Unity - no teclado brasileiro
             // (ABNT) a tecla Ç chega como "Semicolon" (posição do ; americano)
             if (Input.GetKeyDown(KeyCode.Semicolon))
             {
@@ -389,12 +389,17 @@ public class ControladorCamera : MonoBehaviour
             }
         }
 
-        // Space     = pula a PALAVRA
-        // Tab       = pula a LETRA atual (sem pontos)
+        // Space     = pula a PALAVRA (custa pontos)
+        // Tab       = pula a LETRA atual (custa pontos)
         // Backspace = volta à letra anterior
         if (Input.GetKeyDown(KeyCode.Space)     && gerenciador != null) gerenciador.PularPalavra();
         if (Input.GetKeyDown(KeyCode.Tab)       && gerenciador != null) gerenciador.PularLetra();
         if (Input.GetKeyDown(KeyCode.Backspace) && gerenciador != null) gerenciador.VoltarLetra();
+
+        // Supercontrole do apresentador: setas trocam de palavra SEM custo
+        // (só existe no teclado, então não afeta o jogador de celular)
+        if (Input.GetKeyDown(KeyCode.RightArrow) && gerenciador != null) gerenciador.AvancarPalavraGratis();
+        if (Input.GetKeyDown(KeyCode.LeftArrow)  && gerenciador != null) gerenciador.VoltarPalavraGratis();
 
         // Mantém a imagem sem distorção (recorte central estilo "cover")
         AjustarRecorteDaCamera();
@@ -408,7 +413,7 @@ public class ControladorCamera : MonoBehaviour
         }
         else if (minhaCamera.isPlaying && minhaCamera.didUpdateThisFrame)
         {
-            // Processa novo frame da câmera (apenas quando houver frame novo — performance)
+            // Processa novo frame da câmera (apenas quando houver frame novo - performance)
             ProcessarFrame();
             cameraPronta = true;
         }
@@ -475,7 +480,7 @@ public class ControladorCamera : MonoBehaviour
 
             // O sistema sabe qual letra o jogador precisa fazer AGORA.
             // Se ela é DINÂMICA (H J K W X Z Ç), só o comparador de MOVIMENTO
-            // trabalha; se é estática, só o de "foto" — economiza processamento
+            // trabalha; se é estática, só o de "foto" - economiza processamento
             // e um modo nunca atrapalha o outro.
             string letraEsperada = gerenciador.LetraEsperada;
             EsperandoMovimento = letraEsperada.Length > 0 &&
@@ -494,7 +499,7 @@ public class ControladorCamera : MonoBehaviour
                     if (letraMovimento == letraEsperada && gerenciador.TentarLetra(letraMovimento))
                     {
                         // (sem aprendizado automático aqui: letra de MOVIMENTO não
-                        //  deve virar amostra estática — poluiria o banco de fotos)
+                        //  deve virar amostra estática - poluiria o banco de fotos)
                         tempoUltimoReconhecimento = Time.time;
                         janelaMovimento.Clear();
                         temposJanela.Clear();
@@ -595,7 +600,7 @@ public class ControladorCamera : MonoBehaviour
             h = aspectoCamera / aspectoTela; // corta topo e base
         }
 
-        // Aplica a margem de segurança (mostra menos → sobra folga nas bordas)
+        // Aplica a margem de segurança (mostra menos -> sobra folga nas bordas)
         w /= zoomDaTela;
         h /= zoomDaTela;
 
@@ -605,7 +610,7 @@ public class ControladorCamera : MonoBehaviour
 
     // Prepara a imagem e envia para a IA.
     // Com zoom inteligente: recorta um quadrado ao redor da mão (Graphics.Blit)
-    // e envia só ele — a mão ocupa a imagem inteira e o modelo enxerga MUITO melhor.
+    // e envia só ele - a mão ocupa a imagem inteira e o modelo enxerga MUITO melhor.
     void ProcessarFrame()
     {
         if (!zoomInteligente)
@@ -629,7 +634,7 @@ public class ControladorCamera : MonoBehaviour
 
         // Converte centro+lado do recorte em escala/deslocamento normalizados.
         // O recorte pode "vazar" até 30% para fora do quadro: a borda é repetida
-        // (wrap Clamp), mas a mão continua no CENTRO do que a IA analisa —
+        // (wrap Clamp), mas a mão continua no CENTRO do que a IA analisa -
         // muito melhor do que empurrar o recorte e descentralizar a mão.
         const float folga = 0.3f;
         Vector2 escala = new Vector2(lado / w, lado / h);
@@ -673,7 +678,7 @@ public class ControladorCamera : MonoBehaviour
 
     // Converte os 21 landmarks do enum para Vector3[].
     // HandLandmarkDetector.GetKeyPoint() retorna Vector2 (x,y normalizados 0-1)
-    // DENTRO DO RECORTE — aqui mapeamos de volta para o frame inteiro, assim
+    // DENTRO DO RECORTE - aqui mapeamos de volta para o frame inteiro, assim
     // todo o resto do jogo (esqueleto, hover, reconhecimento) continua igual.
     // Definimos z=0 pois o reconhecimento de LIBRAS usa apenas posição 2D.
     Vector3[] ColetarPontosDaMao()

@@ -17,7 +17,7 @@ public class ReproduzirAnimacao : MonoBehaviour
     // Retorna true se encontrou e tocou uma animação (false = modelo estático)
     public static bool Tocar(GameObject alvo, string caminhoResources)
     {
-        // Os clipes moram DENTRO do arquivo FBX — LoadAll pega os sub-assets
+        // Os clipes moram DENTRO do arquivo FBX - LoadAll pega os sub-assets
         var clipes = Resources.LoadAll<AnimationClip>(caminhoResources);
         if (clipes == null || clipes.Length == 0) return false; // sem animação
 

@@ -60,7 +60,7 @@ public static class UIFabrica
         return spriteCirculo;
     }
 
-    // Coração (usado para as vidas) — curva implícita clássica do coração
+    // Coração (usado para as vidas) - curva implícita clássica do coração
     public static Sprite Coracao()
     {
         if (spriteCoracao != null) return spriteCoracao;
@@ -73,7 +73,7 @@ public static class UIFabrica
             // Converte o pixel para coordenadas -1.4..1.4 (coração cabe nisso)
             float x = (px - t / 2f) / (t * 0.36f);
             float y = (py - t / 2f) / (t * 0.36f) + 0.25f;
-            // Equação do coração: (x² + y² - 1)³ - x²·y³ < 0 → dentro
+            // Equação do coração: (x^2 + y^2 - 1)^3 - x^2·y^3 < 0 -> dentro
             float f = Mathf.Pow(x * x + y * y - 1f, 3f) - x * x * y * y * y;
             tex.SetPixel(px, py, new Color(1, 1, 1, f < 0f ? 1f : 0f));
         }

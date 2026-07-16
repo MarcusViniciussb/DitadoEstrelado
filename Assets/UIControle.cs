@@ -82,7 +82,7 @@ public class UIControle : MonoBehaviour
         }
 
         // Barra de progresso do sinal: mostra "estou quase aceitando a letra X"
-        // — o jogador vê o sistema trabalhando em vez de achar que travou
+        // - o jogador vê o sistema trabalhando em vez de achar que travou
         var fundoBarra = UIFabrica.CriarImagem(transform.parent, "BarraSinal",
             new Color(0f, 0f, 0f, 0.15f), new Vector2(20, 22), new Vector2(340, 16),
             UIFabrica.Arredondado(), true);
@@ -104,7 +104,7 @@ public class UIControle : MonoBehaviour
         raizCanvas = GetComponentInParent<Canvas>().transform;
 
         // Flash de tela: feedback VISUAL de acerto (verde) e erro (vermelho).
-        // Essencial para o público surdo — os sons têm gêmeos visuais!
+        // Essencial para o público surdo - os sons têm gêmeos visuais!
         flashTela = UIFabrica.CriarImagem(raizCanvas, "FlashTela",
             new Color(0f, 0f, 0f, 0f), Vector2.zero, Vector2.zero);
         flashTela.rectTransform.anchorMin = Vector2.zero;
@@ -183,7 +183,7 @@ public class UIControle : MonoBehaviour
     }
 
     // Sem pontos para pular: o chip de pontos TREME e pisca vermelho
-    // (feedback visual — o som de erro sozinho não serve ao público surdo)
+    // (feedback visual - o som de erro sozinho não serve ao público surdo)
     private bool tremendoSaldo = false;
 
     void AvisarSemSaldo()
@@ -218,8 +218,8 @@ public class UIControle : MonoBehaviour
         tremendoSaldo       = false;
     }
 
-    // "+1 ❤": um coração com "+1" sobe perto do chip de vidas, e o coração
-    // novo do chip aparece dando um "pulo" (escala 0 → 1 com exagero)
+    // "+1 coracao": um coração com "+1" sobe perto do chip de vidas, e o coração
+    // novo do chip aparece dando um "pulo" (escala 0 -> 1 com exagero)
     void AnimarVidaExtra()
     {
         StartCoroutine(RotinaVidaExtra());
@@ -255,7 +255,7 @@ public class UIControle : MonoBehaviour
             // "pulo" do coração do chip nos primeiros 40% da animação
             if (coracaoDoChip != null && p < 0.4f)
             {
-                float pulo = Mathf.Sin((p / 0.4f) * Mathf.PI); // 0 → 1 → 0
+                float pulo = Mathf.Sin((p / 0.4f) * Mathf.PI); // 0 -> 1 -> 0
                 coracaoDoChip.localScale = Vector3.one * (1f + 0.6f * pulo);
             }
             yield return null;
@@ -385,7 +385,7 @@ public class UIControle : MonoBehaviour
                 {
                     tmp.color = COR_CELEBRACAO;
                     tmp.text  = "PARABÉNS!\nVOCÊ VENCEU!";
-                    ChuvaDeConfetes.Lancar(raizCanvas); // 🎉
+                    ChuvaDeConfetes.Lancar(raizCanvas);
                 }
                 else
                 {

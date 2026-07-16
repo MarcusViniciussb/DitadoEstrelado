@@ -110,7 +110,7 @@ public class HoverButton : MonoBehaviour
     }
 
     // Pega a posição do dedo indicador (ponto 8) em coordenadas de tela.
-    // Usa a conversão do ControladorCamera, que já desconta recorte e espelho —
+    // Usa a conversão do ControladorCamera, que já desconta recorte e espelho -
     // assim o círculo enche exatamente onde a mão APARECE na tela.
     Vector2 ObterPosicaoMaoNaTela()
     {

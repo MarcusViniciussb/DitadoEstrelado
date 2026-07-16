@@ -6,7 +6,7 @@ using System.Collections.Generic;
 //
 // Ele se configura SOZINHO: no início vira uma camada de tela cheia dentro do
 // Canvas (logo acima da imagem da câmera) e usa a conversão de coordenadas do
-// ControladorCamera — que já desconta o recorte e o espelho da imagem.
+// ControladorCamera - que já desconta o recorte e o espelho da imagem.
 // Não é preciso ajustar rotação/escala manualmente no Inspector.
 public class VisualizadorMaoUI : MonoBehaviour
 {
@@ -16,7 +16,7 @@ public class VisualizadorMaoUI : MonoBehaviour
     [Header("Visual")]
     public Color corLinha = new Color(0f, 0.85f, 0.85f, 0.9f);  // ciano
     public Color corPonto = new Color(1f, 1f,    1f,    0.95f); // branco
-    public Color corPulso = new Color(1f, 0.8f,  0.1f,  1f);    // amarelo — ponto 0
+    public Color corPulso = new Color(1f, 0.8f,  0.1f,  1f);    // amarelo - ponto 0
 
     [Range(1f, 8f)]  public float espessuraLinha = 4f;
     [Range(6f, 24f)] public float tamanhoPonto   = 14f;
@@ -66,7 +66,7 @@ public class VisualizadorMaoUI : MonoBehaviour
         meuRect.anchoredPosition = Vector2.zero;
         meuRect.sizeDelta        = Vector2.zero;
 
-        // Câmera usada pelo Canvas (necessária para converter tela → local)
+        // Câmera usada pelo Canvas (necessária para converter tela -> local)
         cameraUI = (canvas.renderMode != RenderMode.ScreenSpaceOverlay)
                    ? canvas.worldCamera : null;
 

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // GerenciadorDeAudio: todos os sons do jogo são GERADOS POR CÓDIGO (síntese de
-// ondas senoidais) — não precisa de nenhum arquivo de áudio no projeto.
+// ondas senoidais) - não precisa de nenhum arquivo de áudio no projeto.
 // Também não precisa colocar nada na cena: ele se cria sozinho na primeira
 // vez que algum script chama GerenciadorDeAudio.TocarClique() etc.
 public class GerenciadorDeAudio : MonoBehaviour
@@ -109,7 +109,7 @@ public class GerenciadorDeAudio : MonoBehaviour
 
     public static void PararMusica() { Obter().fonteMusica.Stop(); }
 
-    // Fixa uma faixa (0 = mais calma ... 4 = mais agitada) — usada pelas
+    // Fixa uma faixa (0 = mais calma ... 4 = mais agitada) - usada pelas
     // fases do jogo para acelerar a música conforme a dificuldade sobe.
     // Passe -1 para voltar ao rodízio livre.
     public static void TocarFaixa(int indice)

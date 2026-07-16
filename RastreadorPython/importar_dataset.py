@@ -6,7 +6,7 @@ Pega uma pasta de FOTOS organizadas por letra, passa cada foto pelo
 MediaPipe (offline), extrai os 21 pontos da mao e adiciona as amostras
 direto no banco do jogo (Assets/MeuAlfabeto.asset).
 
-Resultado: o jogo passa a reconhecer maos DIFERENTES da sua — crucial
+Resultado: o jogo passa a reconhecer maos DIFERENTES da sua - crucial
 para a demo (a banca pode testar com a propria mao!).
 
 USO:
@@ -19,7 +19,7 @@ USO:
   3) Rode:   py importar_dataset.py caminho/da/pasta/dataset
      Opcoes:  --max 15      (maximo de amostras novas por letra)
               --espelhar    (tambem adiciona a versao espelhada = outra mao)
-  4) Abra o Unity — ele recarrega o banco sozinho
+  4) Abra o Unity - ele recarrega o banco sozinho
 
 Um backup do MeuAlfabeto.asset e criado automaticamente antes de mexer.
 """
@@ -134,7 +134,7 @@ def principal():
             print(f"  [{letra}] {adicionadas} amostras extraidas")
 
     if not blocos:
-        print("Nenhuma amostra extraida — confira a organizacao da pasta.")
+        print("Nenhuma amostra extraida - confira a organizacao da pasta.")
         return
 
     # Backup e insercao no asset
@@ -167,7 +167,7 @@ def principal():
     print(f"[SUCESSO] {total} amostras adicionadas ao MeuAlfabeto.asset")
     print("Letras:", "   ".join(f"{l}: {n}" for l, n in sorted(resumo.items())))
     print()
-    print("Agora abra o Unity — o banco novo carrega sozinho.")
+    print("Agora abra o Unity - o banco novo carrega sozinho.")
     print("Se algo der errado, restaure o backup:", os.path.basename(backup))
 
 

@@ -2,7 +2,7 @@ using UnityEngine;
 
 // Flutuar: balanço suave, como se o objeto boiasse na água.
 // Ele oscila para cima/baixo e para os lados, mas sempre em volta
-// do ponto de origem — nunca "vai embora".
+// do ponto de origem - nunca "vai embora".
 // O GerenciadorDeJogo adiciona este componente em toda fruta criada.
 public class Flutuar : MonoBehaviour
 {

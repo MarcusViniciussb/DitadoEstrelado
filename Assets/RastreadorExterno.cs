@@ -6,7 +6,7 @@ using System.Threading;
 
 // RastreadorExterno: recebe os pontos da mão e o vídeo enviados pelo script
 // Python (RastreadorPython/rastreador_maos.py) por UDP em 127.0.0.1.
-// É comunicação interna do próprio PC — funciona 100% offline.
+// É comunicação interna do próprio PC - funciona 100% offline.
 //
 // O ControladorCamera consulta este componente: se o Python estiver rodando,
 // usa ele (MediaPipe completo); senão, usa o rastreador interno antigo.
@@ -74,7 +74,7 @@ public class RastreadorExterno : MonoBehaviour
                     else             { pacoteVideo     = dados; novoVideo     = true; }
                 }
             }
-            catch { /* socket fechado ao sair — normal */ }
+            catch { /* socket fechado ao sair - normal */ }
         }
     }
 

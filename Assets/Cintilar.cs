@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// Cintilar: faz uma imagem de UI pulsar como uma estrela no céu —
+// Cintilar: faz uma imagem de UI pulsar como uma estrela no céu -
 // o brilho (alfa) e o tamanho sobem e descem suavemente, cada estrela
 // no seu próprio ritmo (velocidade e fase sorteadas).
 public class Cintilar : MonoBehaviour
