@@ -109,10 +109,22 @@ public class GerenciadorDeJogo : MonoBehaviour
     public bool JogoTerminado => JogoIniciado && !aguardandoCelebracao && fimDeJogo;
 
     // Pausa (menu aberto no meio do jogo): congela tempo e reconhecimento
-    // SEM perder pontos, vidas nem a fase
+    // SEM perder pontos, vidas nem a fase. O objeto 3D fica na frente da
+    // interface, então precisa ser escondido enquanto o menu está aberto.
     public bool Pausado { get; private set; }
-    public void Pausar()  { if (JogoIniciado && !JogoTerminado) Pausado = true; }
-    public void Retomar() { Pausado = false; }
+
+    public void Pausar()
+    {
+        if (!JogoIniciado || JogoTerminado) return;
+        Pausado = true;
+        if (objetoAtual != null) objetoAtual.SetActive(false);
+    }
+
+    public void Retomar()
+    {
+        Pausado = false;
+        if (objetoAtual != null) objetoAtual.SetActive(true);
+    }
 
     // A letra que o jogador precisa fazer AGORA ("" fora do jogo).
     // O ControladorCamera usa isto para saber se espera um sinal parado

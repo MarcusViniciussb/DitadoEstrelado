@@ -218,7 +218,18 @@ public static class UIFabrica
         botao.targetGraphic = img;
         if (acao != null) botao.onClick.AddListener(acao);
 
-        CriarTexto(go.transform, "Rotulo", rotulo, tamanhoFonte, Color.white, Vector2.zero, tamanho);
+        // O rótulo ESTICA junto com o botão (se o botão for redimensionado
+        // depois, o texto acompanha) e a fonte encolhe sozinha até caber
+        var rotuloTmp = CriarTexto(go.transform, "Rotulo", rotulo, tamanhoFonte,
+                                   Color.white, Vector2.zero, tamanho);
+        var rotuloRt = rotuloTmp.rectTransform;
+        rotuloRt.anchorMin        = Vector2.zero;
+        rotuloRt.anchorMax        = Vector2.one;
+        rotuloRt.anchoredPosition = Vector2.zero;
+        rotuloRt.sizeDelta        = new Vector2(-28, -12); // folga nas bordas
+        rotuloTmp.enableAutoSizing = true;
+        rotuloTmp.fontSizeMax      = tamanhoFonte;
+        rotuloTmp.fontSizeMin      = 16f;
 
         // Círculo que enche enquanto a mão fica sobre o botão
         float diametro = Mathf.Min(tamanho.x, tamanho.y) * 0.85f;
