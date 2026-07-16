@@ -60,6 +60,10 @@ public class GerenciadorDeJogo : MonoBehaviour
     public int pontosPorVidaExtra = 100;
     public int maximoDeVidas      = 5;
 
+    // Modo sem pressao: desliga o tempo e as vidas (bom para iniciantes
+    // e criancas que frustram facil). Controlado pelo painel de opcoes.
+    public bool modoSemPressao = false;
+
     [Header("Tempo de celebracao (s)")]
     public float tempoCelebracao = 2.5f;
 
@@ -135,6 +139,7 @@ public class GerenciadorDeJogo : MonoBehaviour
     // ── Relógio da palavra ───────────────────────────────────────────────────
     void Update()
     {
+        if (modoSemPressao) return; // sem tempo, sem vidas perdidas
         if (!JogoIniciado || Pausado || fimDeJogo || aguardandoCelebracao) return;
         if (string.IsNullOrEmpty(PalavraAtual)) return;
 

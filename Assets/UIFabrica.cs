@@ -12,6 +12,7 @@ public static class UIFabrica
     static Sprite spriteCirculo;
     static Sprite spriteCoracao;
     static Sprite spriteAltoFalante;
+    static Sprite spriteEngrenagem;
 
     // ── Sprites gerados por código ───────────────────────────────────────────
 
@@ -114,6 +115,39 @@ public static class UIFabrica
         tex.Apply();
         spriteAltoFalante = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
         return spriteAltoFalante;
+    }
+
+    // Engrenagem (icone do botao de opcoes): anel + 8 dentes + furo central
+    public static Sprite Engrenagem()
+    {
+        if (spriteEngrenagem != null) return spriteEngrenagem;
+
+        int t = 64; float c = (t - 1) / 2f;
+        var tex = new Texture2D(t, t, TextureFormat.ARGB32, false);
+        for (int y = 0; y < t; y++)
+        for (int x = 0; x < t; x++)
+        {
+            float dx = x - c, dy = y - c;
+            float dist = Mathf.Sqrt(dx * dx + dy * dy);
+            float angulo = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg + 180f; // 0..360
+
+            bool dentro = false;
+
+            // Corpo da engrenagem (anel cheio)
+            if (dist >= 9f && dist <= 21f) dentro = true;
+
+            // 8 dentes: fatias de 20 graus a cada 45 graus
+            if (dist > 21f && dist <= 29f)
+            {
+                float resto = angulo % 45f;
+                if (resto < 11f || resto > 34f) dentro = true;
+            }
+
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, dentro ? 1f : 0f));
+        }
+        tex.Apply();
+        spriteEngrenagem = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
+        return spriteEngrenagem;
     }
 
     // Gradiente vertical (usado como fundo do menu)

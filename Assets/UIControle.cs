@@ -348,15 +348,19 @@ public class UIControle : MonoBehaviour
     {
         if (gerenciador == null || celebrando) return;
 
-        // Chips (pontos, vidas, tempo) só aparecem com o jogo rodando
-        bool rodando = gerenciador.JogoIniciado;
-        bool jogando = rodando && !gerenciador.JogoTerminado;
-        if (chipScore != null && chipScore.activeSelf != rodando) chipScore.SetActive(rodando);
-        if (chipVidas != null && chipVidas.activeSelf != rodando) chipVidas.SetActive(rodando);
-        if (chipTempo != null && chipTempo.activeSelf != jogando) chipTempo.SetActive(jogando);
+        // Chips (pontos, vidas, tempo) só aparecem com o jogo rodando.
+        // No modo sem pressão, tempo e vidas nem existem na tela.
+        bool rodando    = gerenciador.JogoIniciado;
+        bool jogando    = rodando && !gerenciador.JogoTerminado;
+        bool comPressao = !gerenciador.modoSemPressao;
+        bool verVidas   = rodando && comPressao;
+        bool verTempo   = jogando && comPressao;
+        if (chipScore != null && chipScore.activeSelf != rodando)  chipScore.SetActive(rodando);
+        if (chipVidas != null && chipVidas.activeSelf != verVidas) chipVidas.SetActive(verVidas);
+        if (chipTempo != null && chipTempo.activeSelf != verTempo) chipTempo.SetActive(verTempo);
 
         // Relógio da palavra: fica vermelho nos últimos 5 segundos
-        if (jogando && textoTempo != null)
+        if (verTempo && textoTempo != null)
         {
             int segundos = Mathf.CeilToInt(gerenciador.TempoRestante);
             textoTempo.text  = segundos.ToString();
@@ -413,6 +417,29 @@ public class UIControle : MonoBehaviour
     void IniciarCelebracao(string palavraCompleta)
     {
         StartCoroutine(RotinaDeCelebracao(palavraCompleta));
+    }
+
+    // Abre espaço à ESQUERDA do cartão para o objeto 3D ficar ao lado da
+    // palavra (as letras, o rótulo e a barrinha deslocam para a direita).
+    // Chamado pelo MenuPrincipal quando a orientação da tela muda.
+    public void DefinirEspacoDoObjeto(float margemEsquerda, float deslocamentoX)
+    {
+        if (tmp != null)
+        {
+            var margem = tmp.margin;
+            margem.x   = margemEsquerda;
+            tmp.margin = margem;
+        }
+        if (rotulo != null)
+        {
+            var rt = rotulo.rectTransform;
+            rt.anchoredPosition = new Vector2(deslocamentoX, rt.anchoredPosition.y);
+        }
+        if (barraSinal != null)
+        {
+            var rt = (RectTransform)barraSinal.transform;
+            rt.anchoredPosition = new Vector2(deslocamentoX + 20f, rt.anchoredPosition.y);
+        }
     }
 
     // Mostra/atualiza a barrinha "reconhecendo o sinal X..."

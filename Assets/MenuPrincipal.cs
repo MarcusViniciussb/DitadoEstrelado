@@ -52,8 +52,15 @@ public class MenuPrincipal : MonoBehaviour
 
     // Orientacao da tela: false = celular (retrato), true = PC/tablet (paisagem)
     bool telaHorizontal;
-    TextMeshProUGUI rotuloTela;
     CanvasScaler escalador;
+
+    // Painel de opções (engrenagem): tela, tempo/vidas, espelho da câmera
+    GameObject painelOpcoes;
+    TextMeshProUGUI rotuloTela;
+    TextMeshProUGUI rotuloPressao;
+    TextMeshProUGUI rotuloEspelho;
+    TextMeshProUGUI tmpTitulo1;    // texto do título (muda entre os modos)
+    UIControle uiControle;         // para abrir o espaço do objeto no cartão
 
     // Referencias para reposicionar o menu conforme a orientacao
     RectTransform rtTitulo1, rtTitulo2, rtSubtitulo, rtRecorde;
@@ -71,8 +78,11 @@ public class MenuPrincipal : MonoBehaviour
 
     void Start()
     {
-        // Recupera a orientação escolhida na última vez
+        // Recupera as escolhas da última vez (tela, tempo/vidas, espelho)
         telaHorizontal = PlayerPrefs.GetInt("telaHorizontal", 0) == 1;
+        if (gerenciador != null)
+            gerenciador.modoSemPressao = PlayerPrefs.GetInt("semPressao", 0) == 1;
+        AplicarEspelho(PlayerPrefs.GetInt("espelharImagem", 1) == 1);
         AplicarOrientacao();
 
         AbrirMenu();
@@ -167,11 +177,16 @@ public class MenuPrincipal : MonoBehaviour
             36f, COR_TITULO, new Vector2(0, 295), new Vector2(700, 55));
         rtRecorde = textoRecorde.rectTransform;
 
-        // Botão de orientação da tela (canto superior esquerdo do menu)
-        var telaBtn = UIFabrica.CriarBotao(telaMenu.transform, "BotaoTela", "TELA: CELULAR",
-            COR_HUD, new Vector2(30, -30), new Vector2(420, 80), 30f, controlador, AlternarTela);
-        UIFabrica.Ancorar(telaBtn, new Vector2(0f, 1f), new Vector2(0f, 1f));
-        rotuloTela = telaBtn.transform.Find("Rotulo").GetComponent<TextMeshProUGUI>();
+        // Engrenagem de opções no canto superior esquerdo do menu
+        // (alinhada com o botão de som, que fica no canto direito)
+        var engrenagem = UIFabrica.CriarBotao(telaMenu.transform, "BotaoOpcoes", "",
+            COR_HUD, new Vector2(30, -30), new Vector2(150, 90), 30f, controlador, AbrirOpcoes);
+        UIFabrica.Ancorar(engrenagem, new Vector2(0f, 1f), new Vector2(0f, 1f));
+        var iconeEngrenagem = UIFabrica.CriarImagem(engrenagem.transform, "Icone",
+            Color.white, Vector2.zero, new Vector2(56, 56), UIFabrica.Engrenagem());
+        iconeEngrenagem.raycastTarget = false;
+
+        ConstruirPainelOpcoes();
 
         // CONTINUAR: aparece apenas quando o menu foi aberto no MEIO de um
         // jogo (pausa) - retoma exatamente de onde parou
@@ -378,7 +393,62 @@ public class MenuPrincipal : MonoBehaviour
         riscoSom.SetActive(!GerenciadorDeAudio.MusicaLigada);
     }
 
-    // ── Orientação da tela (celular retrato / PC-tablet paisagem) ────────────
+    // ── Painel de opções (engrenagem) ────────────────────────────────────────
+
+    void ConstruirPainelOpcoes()
+    {
+        var fundo = UIFabrica.CriarImagem(telaMenu.transform, "PainelOpcoes",
+            new Color(0.07f, 0.09f, 0.25f, 0.97f), Vector2.zero, new Vector2(700, 640),
+            UIFabrica.Arredondado(), true);
+        painelOpcoes = fundo.gameObject;
+
+        UIFabrica.CriarTexto(fundo.transform, "Titulo", "OPÇÕES",
+            52f, COR_TITULO, new Vector2(0, 250), new Vector2(640, 80));
+
+        rotuloTela    = CriarLinhaDeOpcao(fundo.transform, new Vector2(0,  140), AlternarTela);
+        rotuloPressao = CriarLinhaDeOpcao(fundo.transform, new Vector2(0,   10), AlternarPressao);
+        rotuloEspelho = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, -120), AlternarEspelho);
+
+        UIFabrica.CriarBotao(fundo.transform, "Fechar", "FECHAR",
+            new Color(0.4f, 0.4f, 0.5f, 1f), new Vector2(0, -250), new Vector2(300, 90),
+            36f, controlador, FecharOpcoes);
+
+        painelOpcoes.SetActive(false);
+    }
+
+    TextMeshProUGUI CriarLinhaDeOpcao(Transform pai, Vector2 pos,
+                                      UnityEngine.Events.UnityAction acao)
+    {
+        var botao = UIFabrica.CriarBotao(pai, "Opcao", "", COR_TREINAR, pos,
+            new Vector2(600, 110), 32f, controlador, acao);
+        return botao.transform.Find("Rotulo").GetComponent<TextMeshProUGUI>();
+    }
+
+    void AbrirOpcoes()
+    {
+        GerenciadorDeAudio.TocarClique();
+        AtualizarRotulosOpcoes();
+        painelOpcoes.SetActive(true);
+        painelOpcoes.transform.SetAsLastSibling();
+    }
+
+    void FecharOpcoes()
+    {
+        GerenciadorDeAudio.TocarClique();
+        painelOpcoes.SetActive(false);
+    }
+
+    void AtualizarRotulosOpcoes()
+    {
+        if (rotuloTela != null)
+            rotuloTela.text = telaHorizontal ? "TELA:  PC / TABLET" : "TELA:  CELULAR";
+        if (rotuloPressao != null && gerenciador != null)
+            rotuloPressao.text = gerenciador.modoSemPressao
+                                 ? "TEMPO E VIDAS:  NÃO" : "TEMPO E VIDAS:  SIM";
+        if (rotuloEspelho != null && controlador != null)
+            rotuloEspelho.text = controlador.espelharImagem
+                                 ? "ESPELHAR CÂMERA:  SIM" : "ESPELHAR CÂMERA:  NÃO";
+    }
 
     void AlternarTela()
     {
@@ -386,11 +456,44 @@ public class MenuPrincipal : MonoBehaviour
         telaHorizontal = !telaHorizontal;
         PlayerPrefs.SetInt("telaHorizontal", telaHorizontal ? 1 : 0);
         AplicarOrientacao();
+        AtualizarRotulosOpcoes();
     }
 
-    // Reposiciona TUDO conforme a orientação. No retrato o menu é uma coluna;
-    // na paisagem vira duas colunas (título/créditos à esquerda, botões à
-    // direita) e o objeto 3D fica à esquerda do cartão da palavra.
+    // Liga/desliga o tempo e as vidas (modo tranquilo para iniciantes)
+    void AlternarPressao()
+    {
+        GerenciadorDeAudio.TocarClique();
+        gerenciador.modoSemPressao = !gerenciador.modoSemPressao;
+        PlayerPrefs.SetInt("semPressao", gerenciador.modoSemPressao ? 1 : 0);
+        AtualizarRotulosOpcoes();
+    }
+
+    // Espelha (ou não) a imagem da câmera e a leitura da mão junto
+    void AlternarEspelho()
+    {
+        GerenciadorDeAudio.TocarClique();
+        AplicarEspelho(!controlador.espelharImagem);
+        PlayerPrefs.SetInt("espelharImagem", controlador.espelharImagem ? 1 : 0);
+        AtualizarRotulosOpcoes();
+    }
+
+    void AplicarEspelho(bool espelhar)
+    {
+        controlador.espelharImagem = espelhar;
+        if (controlador.fundoDoEcra != null)
+        {
+            var escala = controlador.fundoDoEcra.rectTransform.localScale;
+            escala.x = espelhar ? -Mathf.Abs(escala.x) : Mathf.Abs(escala.x);
+            controlador.fundoDoEcra.rectTransform.localScale = escala;
+        }
+    }
+
+    // Reposiciona TUDO conforme a orientação.
+    // Retrato: menu em coluna única (como no celular).
+    // Paisagem: título numa linha só no topo, botões lado a lado no centro
+    // e créditos no rodapé.
+    // Nos dois modos o objeto 3D fica DENTRO do cartão da palavra, no espaço
+    // à esquerda, ao lado das letras (não cobre o rosto nem as mãos).
     void AplicarOrientacao()
     {
         bool h = telaHorizontal;
@@ -399,62 +502,84 @@ public class MenuPrincipal : MonoBehaviour
         if (escalador != null)
             escalador.referenceResolution = h ? new Vector2(1920, 1080)
                                               : new Vector2(1080, 1920);
-        if (rotuloTela != null)
-            rotuloTela.text = h ? "TELA: PC / TABLET" : "TELA: CELULAR";
 
-        // posiciona um elemento: 1º valor = retrato, 2º = paisagem
         void Pos(RectTransform rt, Vector2 retrato, Vector2 paisagem)
         {
             if (rt != null) rt.anchoredPosition = h ? paisagem : retrato;
         }
+        void PosTam(RectTransform rt, Vector2 posR, Vector2 tamR,
+                                      Vector2 posP, Vector2 tamP)
+        {
+            if (rt == null) return;
+            rt.anchoredPosition = h ? posP : posR;
+            rt.sizeDelta        = h ? tamP : tamR;
+        }
 
-        // Menu em colunas
-        Pos(rtTitulo1,   new Vector2(0,  620), new Vector2(-460,  330));
-        Pos(rtTitulo2,   new Vector2(0,  480), new Vector2(-460,  190));
-        Pos(rtSubtitulo, new Vector2(0,  360), new Vector2(-460,   80));
-        Pos(rtRecorde,   new Vector2(0,  295), new Vector2(-460,   15));
-        Pos(rtContinuar, new Vector2(0,  195), new Vector2( 460,  250));
-        Pos(rtJogar,     new Vector2(0,   60), new Vector2( 460,  105));
-        Pos(rtTreinar,   new Vector2(0, -110), new Vector2( 460,  -65));
-        Pos(rtSair,      new Vector2(0, -280), new Vector2( 460, -235));
-        Pos(rtDicaMenu,  new Vector2(0, -460), new Vector2( 460, -400));
-        Pos(rtCreditos,  new Vector2(0, -700), new Vector2(-460, -310));
+        // ── Menu ──
+        // Na paisagem o título vira UMA linha ("DITADO ESTRELADO") no topo
+        if (tmpTitulo1 == null && rtTitulo1 != null)
+            tmpTitulo1 = rtTitulo1.GetComponent<TextMeshProUGUI>();
+        if (tmpTitulo1 != null) tmpTitulo1.text = h ? "DITADO ESTRELADO" : "DITADO";
+        if (rtTitulo1  != null) rtTitulo1.sizeDelta = h ? new Vector2(1800, 150)
+                                                        : new Vector2(1000, 150);
+        if (rtTitulo2  != null) rtTitulo2.gameObject.SetActive(!h);
 
-        // Pontos de luz acompanham o título; estrelas se espalham na largura
-        Vector2 deltaTitulo = h ? new Vector2(-460, -290) : Vector2.zero;
+        Pos(rtTitulo1,   new Vector2(0, 620), new Vector2(0, 425));
+        Pos(rtSubtitulo, new Vector2(0, 360), new Vector2(0, 322));
+        Pos(rtRecorde,   new Vector2(0, 295), new Vector2(0, 268));
+
+        PosTam(rtContinuar, new Vector2(0,  195), new Vector2(560, 130),
+                            new Vector2(0,  165), new Vector2(460, 110));
+        PosTam(rtJogar,     new Vector2(0,   60), new Vector2(560, 130),
+                            new Vector2(0,   30), new Vector2(430, 145));
+        PosTam(rtTreinar,   new Vector2(0, -110), new Vector2(560, 130),
+                            new Vector2(-500, 30), new Vector2(400, 125));
+        PosTam(rtSair,      new Vector2(0, -280), new Vector2(560, 130),
+                            new Vector2(500,  30), new Vector2(400, 125));
+        Pos(rtDicaMenu,  new Vector2(0, -460), new Vector2(0, -125));
+        Pos(rtCreditos,  new Vector2(0, -700), new Vector2(0, -350));
+
+        // Luzes acompanham o título; estrelas se espalham na largura nova
         for (int i = 0; i < brilhosTitulo.Count; i++)
-            brilhosTitulo[i].anchoredPosition = brilhosBase[i] + deltaTitulo;
+        {
+            Vector2 b = brilhosBase[i];
+            brilhosTitulo[i].anchoredPosition = h
+                ? new Vector2(b.x * 2.4f, 390f + (b.y - 425f) * 0.30f)
+                : b;
+        }
         for (int i = 0; i < estrelasFundo.Count; i++)
             estrelasFundo[i].anchoredPosition = h
                 ? new Vector2(estrelasBase[i].x * 1.8f, estrelasBase[i].y * 0.55f)
                 : estrelasBase[i];
 
-        // Jogo: cartão da palavra à direita na paisagem (objeto 3D à esquerda)
+        // ── Jogo ──
+        // Cartão da palavra com "slot" à esquerda para o objeto 3D
         if (painelPalavra != null)
         {
-            var rt = (RectTransform)painelPalavra.transform;
-            rt.anchoredPosition = h ? new Vector2(330, 265) : new Vector2(0, 530);
-            rt.sizeDelta        = h ? new Vector2(900, 240) : new Vector2(960, 250);
+            PosTam((RectTransform)painelPalavra.transform,
+                new Vector2(0, 530), new Vector2(960, 250),
+                new Vector2(0, 210), new Vector2(1200, 240));
+
+            if (uiControle == null)
+                uiControle = painelPalavra.GetComponentInChildren<UIControle>(true);
+            if (uiControle != null)
+                uiControle.DefinirEspacoDoObjeto(h ? 300f : 260f, h ? 145f : 120f);
         }
         if (botaoPular != null)
-        {
-            var rt = (RectTransform)botaoPular.transform;
-            rt.anchoredPosition = h ? new Vector2(565, 90) : new Vector2(250, 240);
-            rt.sizeDelta        = h ? new Vector2(440, 100) : new Vector2(460, 110);
-        }
+            PosTam((RectTransform)botaoPular.transform,
+                new Vector2(250, 240), new Vector2(460, 110),
+                new Vector2(775, 210), new Vector2(330, 110));
         if (botaoPularLetra != null)
-        {
-            var rt = (RectTransform)botaoPularLetra.transform;
-            rt.anchoredPosition = h ? new Vector2(95, 90) : new Vector2(-250, 240);
-            rt.sizeDelta        = h ? new Vector2(440, 100) : new Vector2(460, 110);
-        }
+            PosTam((RectTransform)botaoPularLetra.transform,
+                new Vector2(-250, 240), new Vector2(460, 110),
+                new Vector2(-775, 210), new Vector2(330, 110));
 
-        // Objeto 3D: à esquerda do cartão, longe do rosto e das mãos
+        // Objeto 3D posicionado sobre o slot esquerdo do cartão
         if (gerenciador != null && gerenciador.pontoDeExibicao != null)
         {
             gerenciador.pontoDeExibicao.position =
-                h ? new Vector3(-6.5f, 0.0f, 5f) : new Vector3(-0.9f, 1.0f, 5f);
-            gerenciador.tamanhoDoObjeto = h ? 5.0f : 3.4f;
+                h ? new Vector3(-7.2f, -4.3f, 5f) : new Vector3(-3.05f, -2.9f, 5f);
+            gerenciador.tamanhoDoObjeto = h ? 3.1f : 2.0f;
         }
     }
 
@@ -531,7 +656,12 @@ public class MenuPrincipal : MonoBehaviour
 
         telaMenu.SetActive(true);
         telaMenu.transform.SetAsLastSibling(); // menu por cima de tudo
-        if (painelSenha != null) painelSenha.SetActive(false);
+        if (painelSenha  != null) painelSenha.SetActive(false);
+        if (painelOpcoes != null) painelOpcoes.SetActive(false);
+
+        // No menu, o som sobe para ficar alinhado com a engrenagem
+        if (botaoSom != null)
+            ((RectTransform)botaoSom.transform).anchoredPosition = new Vector2(-30, -30);
 
         // Atualiza o recorde exibido (pode ter acabado de bater um novo!)
         if (textoRecorde != null)
@@ -552,5 +682,9 @@ public class MenuPrincipal : MonoBehaviour
         menuAberto = false;
         telaMenu.SetActive(false);
         botaoMenuHud.SetActive(true);
+
+        // No jogo, o som volta para baixo do botão MENU
+        if (botaoSom != null)
+            ((RectTransform)botaoSom.transform).anchoredPosition = new Vector2(-30, -135);
     }
 }
