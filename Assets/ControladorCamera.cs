@@ -60,6 +60,9 @@ public class ControladorCamera : MonoBehaviour
 
     // Janela deslizante: os últimos ~1,4s de mão (usada pelo DTW)
     private List<Vector3[]> janelaMovimento = new List<Vector3[]>();
+
+    // Leitura da janela para outras telas (usada pela pratica do modo estudo)
+    public List<Vector3[]> JanelaDeMovimento { get { return janelaMovimento; } }
     private List<float>     temposJanela    = new List<float>();
     private float tempoUltimaAmostraJanela     = 0f;
     private float tempoUltimaChecagemMovimento = 0f;

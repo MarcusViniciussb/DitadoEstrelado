@@ -231,7 +231,7 @@ public class MenuPrincipal : MonoBehaviour
         UIFabrica.CriarImagem(cred, "Linha", new Color(1f, 0.85f, 0.25f, 0.5f),
             new Vector2(0, 108), new Vector2(320, 4), UIFabrica.Arredondado(), true);
 
-        UIFabrica.CriarTexto(cred, "L1", "trabalho de conclusão de curso",
+        UIFabrica.CriarTexto(cred, "L1", "Trabalho de Conclusão de Curso",
             24f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, 74), new Vector2(840, 34), false);
         var autor = UIFabrica.CriarTexto(cred, "L2", "MARCUS VINICIUS SOUZA BATISTA STRABELLO",
             34f, Color.white, new Vector2(0, 34), new Vector2(840, 52));
@@ -510,6 +510,7 @@ public class MenuPrincipal : MonoBehaviour
         if (escalador != null)
             escalador.referenceResolution = h ? new Vector2(1920, 1080)
                                               : new Vector2(1080, 1920);
+        if (telaEstudo != null) telaEstudo.AplicarLayout(h);
 
         void Pos(RectTransform rt, Vector2 retrato, Vector2 paisagem)
         {
@@ -600,10 +601,9 @@ public class MenuPrincipal : MonoBehaviour
     {
         GerenciadorDeAudio.TocarClique();
         if (telaEstudo == null)
-            telaEstudo = ModoEstudo.Criar(transform, controlador.reconhecedor,
-                                          controlador, FecharEstudo);
+            telaEstudo = ModoEstudo.Criar(transform, controlador, FecharEstudo);
         telaMenu.SetActive(false);
-        telaEstudo.Abrir();
+        telaEstudo.Abrir(telaHorizontal);
     }
 
     void FecharEstudo()
