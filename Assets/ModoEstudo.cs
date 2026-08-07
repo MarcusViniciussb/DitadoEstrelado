@@ -20,29 +20,27 @@ public class ModoEstudo : MonoBehaviour
 {
     const string ALFABETO = "ABCDEFGHIJKLMNOPQRSTUVWXYZÇ";
 
-    // Ossos finos (dedos)
-    static readonly int[,] OSSOS_DEDOS =
+    // A mao e montada em 6 pecas independentes (palma e os cinco dedos).
+    // Cada peca tem contorno proprio e as pecas sao reordenadas por
+    // profundidade a cada quadro, entao um dedo que passa na frente da palma
+    // aparece destacado em vez de se fundir com ela.
+    class ParteDaMao
     {
-        {1,2},{2,3},{3,4},          // polegar
-        {5,6},{6,7},{7,8},          // indicador
-        {9,10},{10,11},{11,12},     // medio
-        {13,14},{14,15},{15,16},    // anelar
-        {17,18},{18,19},{19,20}     // minimo
-    };
+        public RectTransform raiz;
+        public int[,] ossos;              // ligacoes desenhadas
+        public int[]  juntas;             // pontos que recebem circulo
+        public float[] escalaDoOsso;      // afinamento ao longo do dedo
+        public int   pontaDaUnha = -1;    // ponto da ponta (so nos dedos)
+        public Image unha;
+        public readonly List<Image> contorno = new List<Image>();
+        public readonly List<Image> pele     = new List<Image>();
+    }
 
-    // Ossos grossos: preenchem a palma da mao
-    static readonly int[,] OSSOS_PALMA =
-    {
-        {0,1},{0,5},{0,9},{0,13},{0,17},
-        {5,9},{9,13},{13,17},{5,17}
-    };
-
-    // Juntas que fazem parte da palma (recebem circulos maiores)
-    static readonly int[] JUNTAS_PALMA = { 0, 1, 5, 9, 13, 17 };
-
-    static readonly Color COR_FUNDO    = new Color(0.07f, 0.09f, 0.25f, 0.86f);
-    static readonly Color COR_PELE     = new Color(0.98f, 0.80f, 0.64f, 1f);
-    static readonly Color COR_CONTORNO = new Color(0.32f, 0.19f, 0.13f, 1f);
+    static readonly Color COR_FUNDO    = new Color(0.07f, 0.09f, 0.25f, 0.88f);
+    static readonly Color COR_PELE     = new Color(0.99f, 0.82f, 0.66f, 1f);
+    static readonly Color COR_PELE_FUNDO = new Color(0.72f, 0.53f, 0.40f, 1f); // partes ao fundo
+    static readonly Color COR_UNHA     = new Color(1f,    0.92f, 0.88f, 1f);
+    static readonly Color COR_CONTORNO = new Color(0.26f, 0.15f, 0.10f, 1f);
     static readonly Color COR_TITULO   = new Color(1f,    0.85f, 0.25f, 1f);
     static readonly Color COR_BOTAO    = new Color(0.15f, 0.50f, 0.90f, 1f);
     static readonly Color COR_ACERTO   = new Color(0.15f, 0.85f, 0.35f, 1f);
@@ -56,11 +54,7 @@ public class ModoEstudo : MonoBehaviour
     Image fundoDaTela, brilhoAcerto;
     RectTransform areaDaMao;
 
-    // Duas camadas de desenho: contorno (atras, mais grosso) e pele (na frente)
-    readonly List<RectTransform> ossosContorno = new List<RectTransform>();
-    readonly List<RectTransform> ossosPele     = new List<RectTransform>();
-    readonly List<RectTransform> juntasContorno = new List<RectTransform>();
-    readonly List<RectTransform> juntasPele     = new List<RectTransform>();
+    readonly List<ParteDaMao> partes = new List<ParteDaMao>();
 
     int indiceLetra = 0;
     bool horizontal = false;
@@ -130,13 +124,7 @@ public class ModoEstudo : MonoBehaviour
             UIFabrica.Arredondado(), true);
         brilhoAcerto.raycastTarget = false;
 
-        // Camada de contorno primeiro (fica atras), depois a pele
-        for (int i = 0; i < OSSOS_PALMA.GetLength(0) + OSSOS_DEDOS.GetLength(0); i++)
-            ossosContorno.Add(CriarFaixa(COR_CONTORNO));
-        for (int i = 0; i < 21; i++) juntasContorno.Add(CriarJunta(COR_CONTORNO));
-        for (int i = 0; i < OSSOS_PALMA.GetLength(0) + OSSOS_DEDOS.GetLength(0); i++)
-            ossosPele.Add(CriarFaixa(COR_PELE));
-        for (int i = 0; i < 21; i++) juntasPele.Add(CriarJunta(COR_PELE));
+        MontarPartesDaMao();
 
         aviso = UIFabrica.CriarTexto(areaDaMao, "Aviso", "",
             34f, new Color(1f, 1f, 1f, 0.8f), Vector2.zero, new Vector2(500, 220), false);
@@ -175,20 +163,72 @@ public class ModoEstudo : MonoBehaviour
         icone.raycastTarget = false;
     }
 
-    RectTransform CriarFaixa(Color cor)
+    // ── Montagem das pecas da mao ───────────────────────────────────────────
+
+    void MontarPartesDaMao()
     {
-        var img = UIFabrica.CriarImagem(areaDaMao, "Osso", cor, Vector2.zero,
-            new Vector2(10, 10), UIFabrica.Arredondado(), true);
-        img.raycastTarget = false;
-        return img.rectTransform;
+        // Palma: leque do pulso ate os nos dos dedos, com a borda fechada,
+        // para o preenchimento nao deixar falhas
+        CriarParte("Palma",
+            new int[,] { {0,1},{1,5},{5,9},{9,13},{13,17},{17,0},
+                         {0,5},{0,9},{0,13} },
+            new int[] { 0, 1, 5, 9, 13, 17 },
+            new float[] { 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f }, -1);
+
+        // Dedos: cada segmento afina em direcao a ponta
+        float[] afinamento = { 0.92f, 0.82f, 0.72f };
+        CriarParte("Polegar",   new int[,] { {1,2},{2,3},{3,4} },
+                   new int[] { 2, 3, 4 },     afinamento, 4);
+        CriarParte("Indicador", new int[,] { {5,6},{6,7},{7,8} },
+                   new int[] { 6, 7, 8 },     afinamento, 8);
+        CriarParte("Medio",     new int[,] { {9,10},{10,11},{11,12} },
+                   new int[] { 10, 11, 12 },  afinamento, 12);
+        CriarParte("Anelar",    new int[,] { {13,14},{14,15},{15,16} },
+                   new int[] { 14, 15, 16 },  afinamento, 16);
+        CriarParte("Minimo",    new int[,] { {17,18},{18,19},{19,20} },
+                   new int[] { 18, 19, 20 },  afinamento, 20);
     }
 
-    RectTransform CriarJunta(Color cor)
+    void CriarParte(string nome, int[,] ossos, int[] juntas,
+                    float[] escalaDoOsso, int pontaDaUnha)
     {
-        var img = UIFabrica.CriarImagem(areaDaMao, "Junta", cor, Vector2.zero,
-            new Vector2(10, 10), UIFabrica.Circulo());
+        var go = new GameObject(nome, typeof(RectTransform));
+        go.layer = 5;
+        var raiz = go.GetComponent<RectTransform>();
+        raiz.SetParent(areaDaMao, false);
+        raiz.anchorMin = raiz.anchorMax = new Vector2(0.5f, 0.5f);
+        raiz.sizeDelta = Vector2.zero;
+
+        var parte = new ParteDaMao
+        {
+            raiz = raiz, ossos = ossos, juntas = juntas,
+            escalaDoOsso = escalaDoOsso, pontaDaUnha = pontaDaUnha
+        };
+
+        // Primeiro TODO o contorno, depois TODA a pele: assim a peca ganha um
+        // contorno continuo, sem emendas visiveis por dentro
+        for (int i = 0; i < ossos.GetLength(0); i++)
+            parte.contorno.Add(CriarForma(raiz, COR_CONTORNO, true));
+        for (int i = 0; i < juntas.Length; i++)
+            parte.contorno.Add(CriarForma(raiz, COR_CONTORNO, false));
+        for (int i = 0; i < ossos.GetLength(0); i++)
+            parte.pele.Add(CriarForma(raiz, COR_PELE, true));
+        for (int i = 0; i < juntas.Length; i++)
+            parte.pele.Add(CriarForma(raiz, COR_PELE, false));
+
+        if (pontaDaUnha >= 0)
+            parte.unha = CriarForma(raiz, COR_UNHA, false);
+
+        partes.Add(parte);
+    }
+
+    Image CriarForma(Transform pai, Color cor, bool alongada)
+    {
+        var img = UIFabrica.CriarImagem(pai, alongada ? "Osso" : "Junta", cor,
+            Vector2.zero, new Vector2(10, 10),
+            alongada ? UIFabrica.Arredondado() : UIFabrica.Circulo(), alongada);
         img.raycastTarget = false;
-        return img.rectTransform;
+        return img;
     }
 
     // ── Layout: muda conforme a orientacao da tela ──────────────────────────
@@ -231,8 +271,8 @@ public class ModoEstudo : MonoBehaviour
             UIFabrica.Ancorar(textoPratica, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
 
         brilhoAcerto.rectTransform.sizeDelta = rtArea.sizeDelta;
-        grossuraDedo  = tamanhoAlvo * 0.085f;
-        grossuraPalma = tamanhoAlvo * 0.150f;
+        grossuraDedo  = tamanhoAlvo * 0.088f;
+        grossuraPalma = tamanhoAlvo * 0.125f;
 
         if (quadros.Count > 0)
         {
@@ -413,10 +453,7 @@ public class ModoEstudo : MonoBehaviour
 
     void MostrarMao(bool visivel)
     {
-        for (int i = 0; i < ossosContorno.Count;  i++) ossosContorno[i].gameObject.SetActive(visivel);
-        for (int i = 0; i < ossosPele.Count;      i++) ossosPele[i].gameObject.SetActive(visivel);
-        for (int i = 0; i < juntasContorno.Count; i++) juntasContorno[i].gameObject.SetActive(visivel);
-        for (int i = 0; i < juntasPele.Count;     i++) juntasPele[i].gameObject.SetActive(visivel);
+        foreach (var parte in partes) parte.raiz.gameObject.SetActive(visivel);
     }
 
     // Escala unica para TODOS os quadros, senao a mao mudaria de tamanho
@@ -444,30 +481,101 @@ public class ModoEstudo : MonoBehaviour
     {
         if (quadro == null || quadro.Length < 21) return;
 
-        // Contorno usa faixas mais grossas e fica atras da pele
-        DesenharCamada(quadro, ossosContorno, juntasContorno, 9f);
-        DesenharCamada(quadro, ossosPele,     juntasPele,     0f);
-    }
-
-    void DesenharCamada(Vector3[] quadro, List<RectTransform> ossos,
-                        List<RectTransform> juntas, float extra)
-    {
-        int n = 0;
-
-        for (int i = 0; i < OSSOS_PALMA.GetLength(0); i++, n++)
-            PosicionarFaixa(ossos[n], quadro[OSSOS_PALMA[i, 0]], quadro[OSSOS_PALMA[i, 1]],
-                            grossuraPalma + extra);
-
-        for (int i = 0; i < OSSOS_DEDOS.GetLength(0); i++, n++)
-            PosicionarFaixa(ossos[n], quadro[OSSOS_DEDOS[i, 0]], quadro[OSSOS_DEDOS[i, 1]],
-                            grossuraDedo + extra);
-
+        // Profundidade da cena: serve para ordenar as pecas e escurecer o que
+        // esta mais longe. Em z menor a parte esta MAIS PERTO da camera.
+        float zMin = float.MaxValue, zMax = float.MinValue;
         for (int i = 0; i < 21; i++)
         {
-            bool naPalma = System.Array.IndexOf(JUNTAS_PALMA, i) >= 0;
-            float d = (naPalma ? grossuraPalma : grossuraDedo) + extra;
-            juntas[i].anchoredPosition = ParaTela(quadro[i]);
-            juntas[i].sizeDelta        = new Vector2(d, d);
+            if (quadro[i].z < zMin) zMin = quadro[i].z;
+            if (quadro[i].z > zMax) zMax = quadro[i].z;
+        }
+        bool temProfundidade = (zMax - zMin) > 0.0001f;
+
+        // Ordena as pecas: o que esta atras e desenhado primeiro
+        var ordem = new List<KeyValuePair<float, ParteDaMao>>();
+        for (int i = 0; i < partes.Count; i++)
+        {
+            float z = ProfundidadeDaParte(partes[i], quadro);
+            // Sem eixo z (amostras antigas): mantem a ordem natural da mao
+            if (!temProfundidade) z = -i;
+            ordem.Add(new KeyValuePair<float, ParteDaMao>(z, partes[i]));
+        }
+        ordem.Sort((a, b) => b.Key.CompareTo(a.Key));
+
+        for (int i = 0; i < ordem.Count; i++)
+        {
+            var parte = ordem[i].Value;
+            parte.raiz.SetSiblingIndex(i);
+            // O brilho de acerto fica atras da mao; o aviso, na frente
+            brilhoAcerto.transform.SetAsFirstSibling();
+            aviso.transform.SetAsLastSibling();
+
+            // Quanto mais longe, mais escura fica a pele (nocao de volume)
+            float tom = temProfundidade
+                ? Mathf.InverseLerp(zMin, zMax, ordem[i].Key) : 0.25f;
+            Color corDaPele = Color.Lerp(COR_PELE, COR_PELE_FUNDO, tom * 0.75f);
+            DesenharParte(parte, quadro, corDaPele);
+        }
+    }
+
+    float ProfundidadeDaParte(ParteDaMao parte, Vector3[] quadro)
+    {
+        float soma = 0f;
+        for (int i = 0; i < parte.juntas.Length; i++) soma += quadro[parte.juntas[i]].z;
+        return soma / Mathf.Max(1, parte.juntas.Length);
+    }
+
+    void DesenharParte(ParteDaMao parte, Vector3[] quadro, Color corDaPele)
+    {
+        bool ehPalma = (parte.pontaDaUnha < 0);
+        float baseDaParte = ehPalma ? grossuraPalma : grossuraDedo;
+        float bordaExtra  = grossuraDedo * 0.30f; // espessura do contorno
+
+        int nOssos = parte.ossos.GetLength(0);
+        for (int i = 0; i < nOssos; i++)
+        {
+            float g = baseDaParte * parte.escalaDoOsso[Mathf.Min(i, parte.escalaDoOsso.Length - 1)];
+            Vector3 de  = quadro[parte.ossos[i, 0]];
+            Vector3 ate = quadro[parte.ossos[i, 1]];
+            PosicionarFaixa(parte.contorno[i].rectTransform, de, ate, g + bordaExtra);
+            PosicionarFaixa(parte.pele[i].rectTransform,     de, ate, g);
+            parte.pele[i].color = corDaPele;
+        }
+
+        for (int i = 0; i < parte.juntas.Length; i++)
+        {
+            int indice = parte.juntas[i];
+            float g = ehPalma
+                ? grossuraPalma
+                : grossuraDedo * parte.escalaDoOsso[Mathf.Min(i, parte.escalaDoOsso.Length - 1)];
+
+            var contorno = parte.contorno[nOssos + i].rectTransform;
+            var pele     = parte.pele[nOssos + i].rectTransform;
+            Vector2 pos  = ParaTela(quadro[indice]);
+
+            contorno.anchoredPosition = pos;
+            contorno.sizeDelta        = new Vector2(g + bordaExtra, g + bordaExtra);
+            pele.anchoredPosition     = pos;
+            pele.sizeDelta            = new Vector2(g, g);
+            parte.pele[nOssos + i].color = corDaPele;
+        }
+
+        // Unha na ponta do dedo: ajuda a identificar qual dedo e para onde aponta
+        if (parte.unha != null)
+        {
+            int ponta = parte.pontaDaUnha;
+            int antes = parte.ossos[nOssos - 1, 0];
+            Vector2 p = ParaTela(quadro[ponta]);
+            Vector2 direcao = p - ParaTela(quadro[antes]);
+            float g = grossuraDedo * 0.72f;
+
+            var rt = parte.unha.rectTransform;
+            rt.anchoredPosition = p + direcao.normalized * (g * 0.10f);
+            rt.sizeDelta        = new Vector2(g * 0.70f, g * 0.52f);
+            rt.localEulerAngles = new Vector3(0, 0,
+                Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg);
+            parte.unha.color = Color.Lerp(COR_UNHA, COR_PELE_FUNDO,
+                                          1f - corDaPele.r / COR_PELE.r);
         }
     }
 
@@ -477,13 +585,15 @@ public class ModoEstudo : MonoBehaviour
         Vector2 direcao = b - a;
 
         faixa.anchoredPosition = (a + b) * 0.5f;
-        faixa.sizeDelta        = new Vector2(direcao.magnitude + grossura * 0.5f, grossura);
+        faixa.sizeDelta        = new Vector2(direcao.magnitude + grossura, grossura);
         faixa.localEulerAngles = new Vector3(0, 0,
             Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg);
     }
 
+    // Espelha o X para a mao aparecer como o usuario ve a propria mao na tela
     Vector2 ParaTela(Vector3 ponto)
     {
-        return (new Vector2(ponto.x, ponto.y) - centroDoDesenho) * escalaDoDesenho;
+        return new Vector2(-(ponto.x - centroDoDesenho.x),
+                            (ponto.y - centroDoDesenho.y)) * escalaDoDesenho;
     }
 }
