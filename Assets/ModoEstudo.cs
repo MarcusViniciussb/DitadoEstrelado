@@ -30,17 +30,17 @@ public class ModoEstudo : MonoBehaviour
         public int[,] ossos;              // ligacoes desenhadas
         public int[]  juntas;             // pontos que recebem circulo
         public float[] escalaDoOsso;      // afinamento ao longo do dedo
-        public int   pontaDaUnha = -1;    // ponto da ponta (so nos dedos)
-        public Image unha;
+        public bool  ehPalma = false;
         public readonly List<Image> contorno = new List<Image>();
         public readonly List<Image> pele     = new List<Image>();
+        public readonly List<Image> detalhes = new List<Image>(); // linhas da palma
     }
 
     static readonly Color COR_FUNDO    = new Color(0.07f, 0.09f, 0.25f, 0.88f);
     static readonly Color COR_PELE     = new Color(0.99f, 0.82f, 0.66f, 1f);
     static readonly Color COR_PELE_FUNDO = new Color(0.72f, 0.53f, 0.40f, 1f); // partes ao fundo
-    static readonly Color COR_UNHA     = new Color(1f,    0.92f, 0.88f, 1f);
-    static readonly Color COR_CONTORNO = new Color(0.26f, 0.15f, 0.10f, 1f);
+    static readonly Color COR_LINHA_PALMA = new Color(0.60f, 0.42f, 0.32f, 0.55f);
+    static readonly Color COR_CONTORNO = new Color(0.24f, 0.13f, 0.09f, 1f);
     static readonly Color COR_TITULO   = new Color(1f,    0.85f, 0.25f, 1f);
     static readonly Color COR_BOTAO    = new Color(0.15f, 0.50f, 0.90f, 1f);
     static readonly Color COR_ACERTO   = new Color(0.15f, 0.85f, 0.35f, 1f);
@@ -51,7 +51,7 @@ public class ModoEstudo : MonoBehaviour
 
     RectTransform rtTitulo, rtLetra, rtSubtitulo, rtArea, rtContador, rtPratica;
     TextMeshProUGUI letraGrande, subtitulo, contador, aviso, textoPratica;
-    Image fundoDaTela, brilhoAcerto;
+    Image fundoDaTela, brilhoAcerto, fotoDoSinal;
     RectTransform areaDaMao;
 
     readonly List<ParteDaMao> partes = new List<ParteDaMao>();
@@ -126,6 +126,15 @@ public class ModoEstudo : MonoBehaviour
 
         MontarPartesDaMao();
 
+        // Imagem de referencia (opcional). Se existir um arquivo com o nome da
+        // letra em Assets/Resources/SinaisLibras, ele e mostrado no lugar do
+        // desenho. Basta uma foto da propria mao fazendo o sinal.
+        fotoDoSinal = UIFabrica.CriarImagem(areaDaMao, "FotoDoSinal", Color.white,
+            Vector2.zero, new Vector2(520, 520));
+        fotoDoSinal.preserveAspect = true;
+        fotoDoSinal.raycastTarget  = false;
+        fotoDoSinal.gameObject.SetActive(false);
+
         aviso = UIFabrica.CriarTexto(areaDaMao, "Aviso", "",
             34f, new Color(1f, 1f, 1f, 0.8f), Vector2.zero, new Vector2(500, 220), false);
 
@@ -173,24 +182,24 @@ public class ModoEstudo : MonoBehaviour
             new int[,] { {0,1},{1,5},{5,9},{9,13},{13,17},{17,0},
                          {0,5},{0,9},{0,13} },
             new int[] { 0, 1, 5, 9, 13, 17 },
-            new float[] { 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f }, -1);
+            new float[] { 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f }, true);
 
         // Dedos: cada segmento afina em direcao a ponta
         float[] afinamento = { 0.92f, 0.82f, 0.72f };
         CriarParte("Polegar",   new int[,] { {1,2},{2,3},{3,4} },
-                   new int[] { 2, 3, 4 },     afinamento, 4);
+                   new int[] { 2, 3, 4 },     afinamento, false);
         CriarParte("Indicador", new int[,] { {5,6},{6,7},{7,8} },
-                   new int[] { 6, 7, 8 },     afinamento, 8);
+                   new int[] { 6, 7, 8 },     afinamento, false);
         CriarParte("Medio",     new int[,] { {9,10},{10,11},{11,12} },
-                   new int[] { 10, 11, 12 },  afinamento, 12);
+                   new int[] { 10, 11, 12 },  afinamento, false);
         CriarParte("Anelar",    new int[,] { {13,14},{14,15},{15,16} },
-                   new int[] { 14, 15, 16 },  afinamento, 16);
+                   new int[] { 14, 15, 16 },  afinamento, false);
         CriarParte("Minimo",    new int[,] { {17,18},{18,19},{19,20} },
-                   new int[] { 18, 19, 20 },  afinamento, 20);
+                   new int[] { 18, 19, 20 },  afinamento, false);
     }
 
     void CriarParte(string nome, int[,] ossos, int[] juntas,
-                    float[] escalaDoOsso, int pontaDaUnha)
+                    float[] escalaDoOsso, bool ehPalma)
     {
         var go = new GameObject(nome, typeof(RectTransform));
         go.layer = 5;
@@ -202,7 +211,7 @@ public class ModoEstudo : MonoBehaviour
         var parte = new ParteDaMao
         {
             raiz = raiz, ossos = ossos, juntas = juntas,
-            escalaDoOsso = escalaDoOsso, pontaDaUnha = pontaDaUnha
+            escalaDoOsso = escalaDoOsso, ehPalma = ehPalma
         };
 
         // Primeiro TODO o contorno, depois TODA a pele: assim a peca ganha um
@@ -216,8 +225,11 @@ public class ModoEstudo : MonoBehaviour
         for (int i = 0; i < juntas.Length; i++)
             parte.pele.Add(CriarForma(raiz, COR_PELE, false));
 
-        if (pontaDaUnha >= 0)
-            parte.unha = CriarForma(raiz, COR_UNHA, false);
+        // Linhas da palma: dao a leitura de que se ve a palma da mao,
+        // e nao o dorso (que era como o desenho estava sendo entendido)
+        if (ehPalma)
+            for (int i = 0; i < 3; i++)
+                parte.detalhes.Add(CriarForma(raiz, COR_LINHA_PALMA, true));
 
         partes.Add(parte);
     }
@@ -318,7 +330,10 @@ public class ModoEstudo : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.LeftArrow))  LetraAnterior();
 
         // Reproduz a sequencia de movimento em laco, com pausa no fim
-        if (quadros.Count > 1 && Time.unscaledTime >= tempoDoProximoQuadro)
+        // (so quando a mao desenhada esta em uso, e nao a foto)
+        bool usandoFoto = fotoDoSinal != null && fotoDoSinal.gameObject.activeSelf;
+
+        if (!usandoFoto && quadros.Count > 1 && Time.unscaledTime >= tempoDoProximoQuadro)
         {
             quadroAtual = (quadroAtual + 1) % quadros.Count;
             tempoDoProximoQuadro = Time.unscaledTime +
@@ -430,12 +445,15 @@ public class ModoEstudo : MonoBehaviour
                     break;
                 }
 
+        // Imagem de referencia tem prioridade sobre o desenho
+        bool temFoto = CarregarFoto(letra);
         bool temSinal = quadros.Count > 0;
-        MostrarMao(temSinal);
-        aviso.gameObject.SetActive(!temSinal);
-        textoPratica.gameObject.SetActive(temSinal);
 
-        if (!temSinal)
+        MostrarMao(temSinal && !temFoto);
+        aviso.gameObject.SetActive(!temSinal && !temFoto);
+        textoPratica.gameObject.SetActive(temSinal || temFoto);
+
+        if (!temSinal && !temFoto)
         {
             subtitulo.text = "";
             aviso.text = "Sinal ainda não cadastrado.\n\n" +
@@ -443,17 +461,44 @@ public class ModoEstudo : MonoBehaviour
             return;
         }
 
-        subtitulo.text = (quadros.Count > 1) ? "sinal com movimento" : "sinal parado";
+        subtitulo.text = letraAtualDinamica ? "sinal com movimento" : "sinal parado";
         textoPratica.text  = "Faça o sinal para praticar";
         textoPratica.color = new Color(1f, 1f, 1f, 0.6f);
 
-        PrepararEscala();
-        DesenharQuadro(quadros[0]);
+        if (temSinal && !temFoto)
+        {
+            PrepararEscala();
+            DesenharQuadro(quadros[0]);
+        }
     }
 
     void MostrarMao(bool visivel)
     {
         foreach (var parte in partes) parte.raiz.gameObject.SetActive(visivel);
+    }
+
+    // Procura uma imagem da letra em Assets/Resources/SinaisLibras
+    bool CarregarFoto(string letra)
+    {
+        if (fotoDoSinal == null) return false;
+
+        string arquivo = (letra == "Ç") ? "CEDILHA" : letra;
+        var textura = Resources.Load<Texture2D>("SinaisLibras/" + arquivo);
+        if (textura == null && letra == "Ç")
+            textura = Resources.Load<Texture2D>("SinaisLibras/Ç");
+
+        if (textura == null)
+        {
+            fotoDoSinal.gameObject.SetActive(false);
+            return false;
+        }
+
+        fotoDoSinal.sprite = Sprite.Create(textura,
+            new Rect(0, 0, textura.width, textura.height), new Vector2(0.5f, 0.5f));
+        fotoDoSinal.rectTransform.sizeDelta = rtArea.sizeDelta * 0.92f;
+        fotoDoSinal.gameObject.SetActive(true);
+        fotoDoSinal.transform.SetAsLastSibling();
+        return true;
     }
 
     // Escala unica para TODOS os quadros, senao a mao mudaria de tamanho
@@ -527,9 +572,9 @@ public class ModoEstudo : MonoBehaviour
 
     void DesenharParte(ParteDaMao parte, Vector3[] quadro, Color corDaPele)
     {
-        bool ehPalma = (parte.pontaDaUnha < 0);
+        bool ehPalma = parte.ehPalma;
         float baseDaParte = ehPalma ? grossuraPalma : grossuraDedo;
-        float bordaExtra  = grossuraDedo * 0.30f; // espessura do contorno
+        float bordaExtra  = grossuraDedo * 0.40f; // espessura do contorno
 
         int nOssos = parte.ossos.GetLength(0);
         for (int i = 0; i < nOssos; i++)
@@ -560,23 +605,30 @@ public class ModoEstudo : MonoBehaviour
             parte.pele[nOssos + i].color = corDaPele;
         }
 
-        // Unha na ponta do dedo: ajuda a identificar qual dedo e para onde aponta
-        if (parte.unha != null)
+        // Tres linhas leves dentro da palma (as pregas da mao)
+        if (ehPalma && parte.detalhes.Count >= 3)
         {
-            int ponta = parte.pontaDaUnha;
-            int antes = parte.ossos[nOssos - 1, 0];
-            Vector2 p = ParaTela(quadro[ponta]);
-            Vector2 direcao = p - ParaTela(quadro[antes]);
-            float g = grossuraDedo * 0.72f;
-
-            var rt = parte.unha.rectTransform;
-            rt.anchoredPosition = p + direcao.normalized * (g * 0.10f);
-            rt.sizeDelta        = new Vector2(g * 0.70f, g * 0.52f);
-            rt.localEulerAngles = new Vector3(0, 0,
-                Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg);
-            parte.unha.color = Color.Lerp(COR_UNHA, COR_PELE_FUNDO,
-                                          1f - corDaPele.r / COR_PELE.r);
+            float fina = grossuraDedo * 0.15f;
+            DesenharLinhaDaPalma(parte.detalhes[0], quadro, 0, 5, 0.45f, 0, 13, 0.55f, fina);
+            DesenharLinhaDaPalma(parte.detalhes[1], quadro, 0, 5, 0.62f, 0, 17, 0.50f, fina);
+            DesenharLinhaDaPalma(parte.detalhes[2], quadro, 0, 9, 0.30f, 0, 17, 0.30f, fina);
         }
+    }
+
+    // Traca uma linha entre dois pontos "no meio do caminho" de dois ossos
+    void DesenharLinhaDaPalma(Image linha, Vector3[] quadro,
+                              int a1, int a2, float fA, int b1, int b2, float fB,
+                              float grossura)
+    {
+        Vector2 a = Vector2.Lerp(ParaTela(quadro[a1]), ParaTela(quadro[a2]), fA);
+        Vector2 b = Vector2.Lerp(ParaTela(quadro[b1]), ParaTela(quadro[b2]), fB);
+        Vector2 direcao = b - a;
+
+        var rt = linha.rectTransform;
+        rt.anchoredPosition = (a + b) * 0.5f;
+        rt.sizeDelta        = new Vector2(direcao.magnitude, grossura);
+        rt.localEulerAngles = new Vector3(0, 0,
+            Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg);
     }
 
     void PosicionarFaixa(RectTransform faixa, Vector3 de, Vector3 ate, float grossura)

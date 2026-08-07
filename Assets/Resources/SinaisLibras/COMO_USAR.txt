@@ -1,0 +1,22 @@
+IMAGENS DE REFERENCIA DOS SINAIS (opcional)
+===========================================
+
+Coloque nesta pasta uma imagem por letra e ela sera exibida no modo
+"Aprenda os Sinais" no lugar do desenho gerado pelo sistema.
+
+Nome dos arquivos (PNG ou JPG):
+
+    A.png  B.png  C.png  ...  Z.png  CEDILHA.png
+
+Recomendacoes:
+
+- Fotografe a propria mao fazendo cada sinal, de frente, com fundo
+  claro e liso. Imagens quadradas (por exemplo 800x800) ficam melhores.
+- Nao use imagens de terceiros sem autorizacao: cartazes e apostilas do
+  alfabeto costumam ter direitos autorais do ilustrador ou da editora.
+- As letras com movimento (H, J, K, W, X, Z e C-cedilha) continuam
+  contando com a sequencia gravada; se preferir mostrar a foto, adicione
+  uma seta na propria imagem indicando o movimento.
+
+Se a pasta estiver vazia, o sistema desenha a mao a partir do banco de
+sinais normalmente. Nada quebra.
