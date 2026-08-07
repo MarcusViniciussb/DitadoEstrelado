@@ -72,7 +72,11 @@ public class ModoEstudo : MonoBehaviour
     bool  letraAtualDinamica = false;
     float tempoSinalCerto    = 0f;
     float tempoDoProximoAviso = 0f;
+    float tempoDaProximaChecagem = 0f;
     bool  comemorando = false;
+
+    // Guarda as imagens ja convertidas, para nao refazer a cada troca de letra
+    readonly Dictionary<string, Sprite> fotosCarregadas = new Dictionary<string, Sprite>();
 
     // ── Criacao da tela ─────────────────────────────────────────────────────
 
@@ -352,6 +356,11 @@ public class ModoEstudo : MonoBehaviour
         if (controlador == null || reconhecedor == null) return;
         if (Time.unscaledTime < tempoDoProximoAviso) return;
 
+        // Compara algumas vezes por segundo. Comparar a cada quadro repetiria
+        // um calculo pesado sem ganho nenhum para o usuario.
+        if (Time.unscaledTime < tempoDaProximaChecagem) return;
+        tempoDaProximaChecagem = Time.unscaledTime + 0.1f;
+
         if (!controlador.MaoDetectada || controlador.PontosDaMaoAtuais == null)
         {
             tempoSinalCerto = 0f;
@@ -451,7 +460,8 @@ public class ModoEstudo : MonoBehaviour
 
         MostrarMao(temSinal && !temFoto);
         aviso.gameObject.SetActive(!temSinal && !temFoto);
-        textoPratica.gameObject.SetActive(temSinal || temFoto);
+        // A pratica depende das amostras gravadas, nao da imagem
+        textoPratica.gameObject.SetActive(temSinal);
 
         if (!temSinal && !temFoto)
         {
@@ -482,19 +492,26 @@ public class ModoEstudo : MonoBehaviour
     {
         if (fotoDoSinal == null) return false;
 
-        string arquivo = (letra == "Ç") ? "CEDILHA" : letra;
-        var textura = Resources.Load<Texture2D>("SinaisLibras/" + arquivo);
-        if (textura == null && letra == "Ç")
-            textura = Resources.Load<Texture2D>("SinaisLibras/Ç");
+        Sprite figura;
+        if (!fotosCarregadas.TryGetValue(letra, out figura))
+        {
+            string arquivo = (letra == "Ç") ? "CEDILHA" : letra;
+            var textura = Resources.Load<Texture2D>("SinaisLibras/" + arquivo);
+            if (textura == null && letra == "Ç")
+                textura = Resources.Load<Texture2D>("SinaisLibras/Ç");
 
-        if (textura == null)
+            figura = (textura == null) ? null : Sprite.Create(textura,
+                new Rect(0, 0, textura.width, textura.height), new Vector2(0.5f, 0.5f));
+            fotosCarregadas[letra] = figura; // guarda ate o "sem imagem"
+        }
+
+        if (figura == null)
         {
             fotoDoSinal.gameObject.SetActive(false);
             return false;
         }
 
-        fotoDoSinal.sprite = Sprite.Create(textura,
-            new Rect(0, 0, textura.width, textura.height), new Vector2(0.5f, 0.5f));
+        fotoDoSinal.sprite = figura;
         fotoDoSinal.rectTransform.sizeDelta = rtArea.sizeDelta * 0.92f;
         fotoDoSinal.gameObject.SetActive(true);
         fotoDoSinal.transform.SetAsLastSibling();

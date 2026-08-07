@@ -576,6 +576,7 @@ public class GerenciadorDeJogo : MonoBehaviour
         if (pontuacao > recorde)
         {
             PlayerPrefs.SetInt("recorde", pontuacao);
+            PlayerPrefs.Save(); // grava agora, sem depender do fechamento normal
             Debug.Log("NOVO RECORDE: " + pontuacao);
         }
     }

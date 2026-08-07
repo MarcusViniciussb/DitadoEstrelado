@@ -472,7 +472,10 @@ public class ControladorCamera : MonoBehaviour
             bolinhaDoDedo.localPosition = new Vector3(xNoEcra, yNoEcra, 4f);
 
         // Modo Jogo: reconhece letra e envia para o GerenciadorDeJogo
-        if (!MODO_TREINAMENTO && reconhecedor != null && gerenciador != null)
+        // So classifica com uma partida em andamento: no menu e na tela de
+        // estudo isso seria trabalho jogado fora a cada quadro
+        if (!MODO_TREINAMENTO && reconhecedor != null &&
+            gerenciador != null && gerenciador.JogoIniciado)
         {
             // Cooldown: ignora reconhecimentos muito rápidos (evita registrar a mesma letra várias vezes)
             if (Time.time - tempoUltimoReconhecimento < cooldownReconhecimento)
