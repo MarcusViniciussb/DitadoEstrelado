@@ -13,6 +13,7 @@ public static class UIFabrica
     static Sprite spriteCoracao;
     static Sprite spriteAltoFalante;
     static Sprite spriteEngrenagem;
+    static Sprite spriteSeta;
 
     // ── Sprites gerados por código ───────────────────────────────────────────
 
@@ -148,6 +149,26 @@ public static class UIFabrica
         tex.Apply();
         spriteEngrenagem = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
         return spriteEngrenagem;
+    }
+
+    // Seta triangular apontando para a DIREITA (gire 180 graus para a esquerda)
+    public static Sprite Seta()
+    {
+        if (spriteSeta != null) return spriteSeta;
+
+        int t = 64;
+        var tex = new Texture2D(t, t, TextureFormat.ARGB32, false);
+        for (int y = 0; y < t; y++)
+        for (int x = 0; x < t; x++)
+        {
+            // Triangulo com base em x=12 e ponta em x=54
+            float meiaAltura = (54f - x) * (24f / 42f);
+            bool dentro = x >= 12 && x <= 54 && Mathf.Abs(y - 32f) <= meiaAltura;
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, dentro ? 1f : 0f));
+        }
+        tex.Apply();
+        spriteSeta = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
+        return spriteSeta;
     }
 
     // Gradiente vertical (usado como fundo do menu)

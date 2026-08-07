@@ -64,7 +64,8 @@ public class MenuPrincipal : MonoBehaviour
 
     // Referencias para reposicionar o menu conforme a orientacao
     RectTransform rtTitulo1, rtTitulo2, rtSubtitulo, rtRecorde;
-    RectTransform rtContinuar, rtJogar, rtTreinar, rtSair, rtDicaMenu, rtCreditos;
+    RectTransform rtContinuar, rtJogar, rtAprender, rtTreinar, rtSair, rtDicaMenu, rtCreditos;
+    ModoEstudo telaEstudo;
     readonly List<RectTransform> estrelasFundo = new List<RectTransform>();
     readonly List<Vector2>       estrelasBase  = new List<Vector2>();
     readonly List<RectTransform> brilhosTitulo = new List<RectTransform>();
@@ -201,6 +202,10 @@ public class MenuPrincipal : MonoBehaviour
             new Vector2(0, 60),   new Vector2(560, 130), 56f, controlador, Jogar);
         rotuloJogar = jogar.transform.Find("Rotulo").GetComponent<TextMeshProUGUI>();
         rtJogar = jogar.GetComponent<RectTransform>();
+        rtAprender = UIFabrica.CriarBotao(telaMenu.transform, "BotaoAprender", "APRENDA OS SINAIS",
+            new Color(0.85f, 0.55f, 0.15f, 1f),
+            new Vector2(0, -75), new Vector2(560, 125), 46f, controlador, AbrirEstudo)
+            .GetComponent<RectTransform>();
         rtTreinar = UIFabrica.CriarBotao(telaMenu.transform, "BotaoTreinar", "TREINAMENTO", COR_TREINAR,
             new Vector2(0, -110), new Vector2(560, 130), 52f, controlador, PedirSenha)
             .GetComponent<RectTransform>();
@@ -226,15 +231,18 @@ public class MenuPrincipal : MonoBehaviour
         UIFabrica.CriarImagem(cred, "Linha", new Color(1f, 0.85f, 0.25f, 0.5f),
             new Vector2(0, 108), new Vector2(320, 4), UIFabrica.Arredondado(), true);
 
-        UIFabrica.CriarTexto(cred, "L1", "produzido por",
+        UIFabrica.CriarTexto(cred, "L1", "trabalho de conclusão de curso",
             24f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, 74), new Vector2(840, 34), false);
-        UIFabrica.CriarTexto(cred, "L2", "MARCUS STRABELLO",
-            40f, Color.white, new Vector2(0, 34), new Vector2(840, 52));
-        UIFabrica.CriarTexto(cred, "L3", "Orientação: Prof. Dr. Alex Martins Santos",
-            27f, new Color(1f, 1f, 1f, 0.8f), new Vector2(0, -18), new Vector2(840, 40), false);
-        UIFabrica.CriarTexto(cred, "L4", "Visão Computacional  •  PPGCA  •  IFMA",
-            26f, new Color(1f, 0.85f, 0.25f, 0.85f), new Vector2(0, -58), new Vector2(840, 38), false);
-        UIFabrica.CriarTexto(cred, "L5", "Campus São Luís - Monte Castelo",
+        var autor = UIFabrica.CriarTexto(cred, "L2", "MARCUS VINICIUS SOUZA BATISTA STRABELLO",
+            34f, Color.white, new Vector2(0, 34), new Vector2(840, 52));
+        autor.enableAutoSizing = true;
+        autor.fontSizeMin = 22f;
+        autor.fontSizeMax = 34f;
+        UIFabrica.CriarTexto(cred, "L3", "Orientação: Prof. Me. Rogério Pereira de Sousa",
+            26f, new Color(1f, 1f, 1f, 0.8f), new Vector2(0, -18), new Vector2(840, 40), false);
+        UIFabrica.CriarTexto(cred, "L4", "Especialização em Desenvolvimento de Sistemas Computacionais",
+            23f, new Color(1f, 0.85f, 0.25f, 0.85f), new Vector2(0, -58), new Vector2(860, 38), false);
+        UIFabrica.CriarTexto(cred, "L5", "Instituto Federal do Tocantins  -  Campus Araguatins",
             23f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, -94), new Vector2(840, 34), false);
     }
 
@@ -528,16 +536,18 @@ public class MenuPrincipal : MonoBehaviour
         Pos(rtSubtitulo, new Vector2(0, 360), new Vector2(0, 322));
         Pos(rtRecorde,   new Vector2(0, 295), new Vector2(0, 268));
 
-        PosTam(rtContinuar, new Vector2(0,  195), new Vector2(560, 130),
-                            new Vector2(0,  165), new Vector2(460, 110));
-        PosTam(rtJogar,     new Vector2(0,   60), new Vector2(560, 130),
-                            new Vector2(0,   30), new Vector2(430, 145));
-        PosTam(rtTreinar,   new Vector2(0, -110), new Vector2(560, 130),
-                            new Vector2(-500, 30), new Vector2(400, 125));
-        PosTam(rtSair,      new Vector2(0, -280), new Vector2(560, 130),
-                            new Vector2(500,  30), new Vector2(400, 125));
-        Pos(rtDicaMenu,  new Vector2(0, -460), new Vector2(0, -125));
-        Pos(rtCreditos,  new Vector2(0, -700), new Vector2(0, -350));
+        PosTam(rtContinuar, new Vector2(0,  215), new Vector2(560, 120),
+                            new Vector2(0,  180), new Vector2(460, 100));
+        PosTam(rtJogar,     new Vector2(0,   80), new Vector2(560, 125),
+                            new Vector2(0,   45), new Vector2(440, 150));
+        PosTam(rtAprender,  new Vector2(0,  -55), new Vector2(560, 120),
+                            new Vector2(-490, 45), new Vector2(420, 120));
+        PosTam(rtTreinar,   new Vector2(0, -190), new Vector2(560, 120),
+                            new Vector2(490,  45), new Vector2(420, 120));
+        PosTam(rtSair,      new Vector2(0, -325), new Vector2(560, 120),
+                            new Vector2(0,  -90), new Vector2(320, 100));
+        Pos(rtDicaMenu,  new Vector2(0, -430), new Vector2(0, -170));
+        Pos(rtCreditos,  new Vector2(0, -690), new Vector2(0, -335));
 
         // Luzes acompanham o título; estrelas se espalham na largura nova
         for (int i = 0; i < brilhosTitulo.Count; i++)
@@ -567,12 +577,12 @@ public class MenuPrincipal : MonoBehaviour
         }
         if (botaoPular != null)
             PosTam((RectTransform)botaoPular.transform,
-                new Vector2(250, 240), new Vector2(460, 110),
-                new Vector2(775, 210), new Vector2(330, 110));
+                new Vector2(250, 240), new Vector2(470, 115),
+                new Vector2(770, 210), new Vector2(390, 115));
         if (botaoPularLetra != null)
             PosTam((RectTransform)botaoPularLetra.transform,
-                new Vector2(-250, 240), new Vector2(460, 110),
-                new Vector2(-775, 210), new Vector2(330, 110));
+                new Vector2(-250, 240), new Vector2(470, 115),
+                new Vector2(-770, 210), new Vector2(390, 115));
 
         // Objeto 3D posicionado sobre o slot esquerdo do cartão
         if (gerenciador != null && gerenciador.pontoDeExibicao != null)
@@ -584,6 +594,24 @@ public class MenuPrincipal : MonoBehaviour
     }
 
     // ── Ações dos botões ─────────────────────────────────────────────────────
+
+    // Abre a tela de consulta do alfabeto (criada na primeira vez que e usada)
+    void AbrirEstudo()
+    {
+        GerenciadorDeAudio.TocarClique();
+        if (telaEstudo == null)
+            telaEstudo = ModoEstudo.Criar(transform, controlador.reconhecedor,
+                                          controlador, FecharEstudo);
+        telaMenu.SetActive(false);
+        telaEstudo.Abrir();
+    }
+
+    void FecharEstudo()
+    {
+        telaMenu.SetActive(true);
+        telaMenu.transform.SetAsLastSibling();
+        if (botaoSom != null) botaoSom.transform.SetAsLastSibling();
+    }
 
     // Retoma o jogo pausado exatamente de onde parou
     void Continuar()
@@ -658,6 +686,7 @@ public class MenuPrincipal : MonoBehaviour
         telaMenu.transform.SetAsLastSibling(); // menu por cima de tudo
         if (painelSenha  != null) painelSenha.SetActive(false);
         if (painelOpcoes != null) painelOpcoes.SetActive(false);
+        if (telaEstudo   != null) telaEstudo.gameObject.SetActive(false);
 
         // No menu, o som sobe para ficar alinhado com a engrenagem
         if (botaoSom != null)

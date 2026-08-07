@@ -1,8 +1,9 @@
 # Ditado Estrelado
 
-Jogo educativo de soletracao em LIBRAS, desenvolvido para a disciplina de
-Visao Computacional do Programa de Pos-Graduacao em Computacao Aplicada
-(PPGCA) do IFMA - Campus Sao Luis Monte Castelo.
+Jogo educativo de soletracao em LIBRAS, desenvolvido como Trabalho de
+Conclusao de Curso da Pos-Graduacao lato sensu em Desenvolvimento de
+Sistemas Computacionais do Instituto Federal do Tocantins (IFTO) -
+Campus Araguatins.
 
 Um objeto 3D aparece na tela (fruta, animal, veiculo ou comida) e o jogador
 precisa soletrar o nome dele fazendo os sinais do alfabeto manual de LIBRAS
@@ -27,8 +28,16 @@ Passos:
 Sem o Python instalado o jogo continua funcionando com um rastreador
 interno mais simples (menor precisao).
 
-No menu inicial da para escolher a orientacao da tela: celular (retrato)
-ou PC/tablet (paisagem).
+Na engrenagem do menu inicial ficam as opcoes: orientacao da tela (celular
+ou PC/tablet), tempo e vidas ligados ou desligados, e espelhamento da camera.
+
+## Modos
+
+- JOGAR: quatro fases (frutas, animais, transporte e comidas) com tempo,
+  vidas e pontuacao
+- APRENDA OS SINAIS: consulta do alfabeto, uma letra por vez, com o
+  desenho da mao; nas letras com movimento a sequencia e reproduzida em laco
+- TREINAMENTO (protegido por senha): cadastro dos sinais
 
 ## Controles
 
@@ -64,8 +73,11 @@ maos de outras pessoas.
 
 ## Creditos
 
-Autor: Marcus Strabello
+Autor: Marcus Vinicius Souza Batista Strabello
 
-Orientacao: Prof. Dr. Alex Martins Santos
+Orientacao: Prof. Me. Rogerio Pereira de Sousa
+
+Curso: Especializacao em Desenvolvimento de Sistemas Computacionais
+(IFTO - Campus Araguatins)
 
 Modelos 3D: Quaternius e Kay Lousberg (licencas livres, incluidas nas pastas)
