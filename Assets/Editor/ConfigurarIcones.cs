@@ -8,23 +8,18 @@ using UnityEngine;
 // Pelo editor:  menu  Ditado Estrelado > Aplicar icones
 // Tambem roda sozinho antes de cada APK, para o icone nunca ficar para tras.
 //
-// O Android moderno usa o icone "adaptativo", montado em duas camadas: a marca
-// na frente e a cor de fundo atras. O sistema recorta esse conjunto no formato
-// que o aparelho usa (circulo, quadrado arredondado...). Por isso a marca da
-// frente e desenhada menor: as bordas podem ser cortadas.
+// O aparelho recorta o icone no formato que usa - circulo, quadrado
+// arredondado, gota. Por isso a marca fica bem dentro do quadrado, com folga
+// nas bordas: o que estiver na beirada pode ser cortado.
 public static class ConfigurarIcones
 {
     const string PASTA  = "Assets/Icones/";
     const string COMUM  = PASTA + "icone.png";
-    const string FRENTE = PASTA + "icone_frente.png";
-    const string FUNDO  = PASTA + "icone_fundo.png";
 
     [MenuItem("Ditado Estrelado/Aplicar icones")]
     public static void Aplicar()
     {
-        Texture2D comum  = Preparar(COMUM);
-        Texture2D frente = Preparar(FRENTE);
-        Texture2D fundo  = Preparar(FUNDO);
+        Texture2D comum = Preparar(COMUM);
 
         if (comum == null)
         {
@@ -32,11 +27,12 @@ public static class ConfigurarIcones
             return;
         }
 
-        // Android: icone antigo (aparelhos mais velhos), redondo e adaptativo
-        Definir(NamedBuildTarget.Android, comum,  IconKind.Application);
-        Definir(NamedBuildTarget.Android, comum,  IconKind.Round);
-        if (frente != null) Definir(NamedBuildTarget.Android, frente, IconKind.AdaptiveForeground);
-        if (fundo  != null) Definir(NamedBuildTarget.Android, fundo,  IconKind.AdaptiveBackground);
+        // Android. As camadas do icone "adaptativo" so existem numa biblioteca
+        // separada, que scripts de editor comuns nao enxergam. O icone classico
+        // resolve: os aparelhos modernos recortam sozinhos a forma que usam
+        // (circulo, quadrado arredondado), e por isso a marca foi desenhada
+        // bem dentro do quadrado, longe das bordas que podem ser cortadas.
+        Definir(NamedBuildTarget.Android, comum, IconKind.Application);
 
         // Executavel de computador (Windows, Mac, Linux)
         Definir(NamedBuildTarget.Standalone, comum, IconKind.Any);
