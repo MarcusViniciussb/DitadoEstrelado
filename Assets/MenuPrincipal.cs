@@ -581,8 +581,8 @@ public class MenuPrincipal : MonoBehaviour
         if (painelPalavra != null)
         {
             PosTam((RectTransform)painelPalavra.transform,
-                new Vector2(0, 530), new Vector2(960, 250),
-                new Vector2(0, 210), new Vector2(1200, 240));
+                new Vector2(0, 330), new Vector2(960, 250),
+                new Vector2(0, -60), new Vector2(1200, 240));
 
             if (uiControle == null)
                 uiControle = painelPalavra.GetComponentInChildren<UIControle>(true);
@@ -591,12 +591,12 @@ public class MenuPrincipal : MonoBehaviour
         }
         if (botaoPular != null)
             PosTam((RectTransform)botaoPular.transform,
-                new Vector2(250, 240), new Vector2(470, 115),
-                new Vector2(770, 210), new Vector2(390, 115));
+                new Vector2(250, 105), new Vector2(470, 115),
+                new Vector2(770, -60), new Vector2(390, 115));
         if (botaoPularLetra != null)
             PosTam((RectTransform)botaoPularLetra.transform,
-                new Vector2(-250, 240), new Vector2(470, 115),
-                new Vector2(-770, 210), new Vector2(390, 115));
+                new Vector2(-250, 105), new Vector2(470, 115),
+                new Vector2(-770, -60), new Vector2(390, 115));
 
         larguraDoSlot = h ? 300f : 260f;
         PosicionarObjeto3D();

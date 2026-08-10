@@ -516,10 +516,24 @@ public class ControladorCamera : MonoBehaviour
             0.5f + (d.center.x - 0.5f) * L / larguraDoQuadro,
             0.5f + (d.center.y - 0.5f) * L / alturaDoQuadro);
 
-        // Onde recortar: a caixa da palma, com folga para os dedos caberem
+        // Mesmo criterio do rastreio: o eixo pulso -> base do dedo medio
+        Vector2 pulsoQ  = new Vector2(d.wrist.x  * L, d.wrist.y  * L);
+        Vector2 medioQ  = new Vector2(d.middle.x * L, d.middle.y * L);
+        float palmaNoQuadrado = Vector2.Distance(pulsoQ, medioQ);
+
+        if (palmaNoQuadrado > 1f)
+        {
+            Vector2 centroPx = pulsoQ + (medioQ - pulsoQ) * 0.9f;
+            centroNoQuadro = new Vector2(
+                0.5f + (centroPx.x / L - 0.5f) * L / larguraDoQuadro,
+                0.5f + (centroPx.y / L - 0.5f) * L / alturaDoQuadro);
+        }
+
         centroCaixa = centroNoQuadro;
-        float ladoEmPixels = Mathf.Max(d.extent.x * L, d.extent.y * L);
-        ladoCaixaPx = Mathf.Clamp(ladoEmPixels * 2.6f, 160f,
+        float ladoEmPixels = (palmaNoQuadrado > 1f)
+            ? palmaNoQuadrado * 3.4f
+            : Mathf.Max(d.extent.x * L, d.extent.y * L) * 2.6f;
+        ladoCaixaPx = Mathf.Clamp(ladoEmPixels, 180f,
                                   Mathf.Min(larguraDoQuadro, alturaDoQuadro));
 
         // Quanto girar: a direcao do pulso ate a base do dedo medio diz a
@@ -962,18 +976,35 @@ public class ControladorCamera : MonoBehaviour
         }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-        // Angulo da mao: direcao do pulso ate a base do dedo medio. Girando o
-        // recorte por 90 graus menos esse angulo, a mao chega em pe ao modelo.
         if (alinharMao)
         {
-            Vector2 direcao = new Vector2(
-                (pontos[9].x - pontos[0].x) * larguraDoQuadro,
-                (pontos[9].y - pontos[0].y) * alturaDoQuadro);
+            // A palma vai do pulso ate a base do dedo medio. Ela mantem o
+            // mesmo tamanho com a mao aberta ou fechada, por isso guia tanto
+            // o giro quanto o enquadramento.
+            Vector2 pulsoPx = new Vector2(pontos[0].x * larguraDoQuadro,
+                                          pontos[0].y * alturaDoQuadro);
+            Vector2 baseDoMedioPx = new Vector2(pontos[9].x * larguraDoQuadro,
+                                                pontos[9].y * alturaDoQuadro);
+            Vector2 direcao = baseDoMedioPx - pulsoPx;
+            float palmaPx = direcao.magnitude;
 
-            if (direcao.sqrMagnitude > 0.0001f)
+            if (palmaPx > 1f)
             {
                 float desejado = 90f - Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg;
                 anguloDaMao = Mathf.LerpAngle(anguloDaMao, desejado, 0.35f);
+
+                // Enquadra pela palma, um pouco a frente dela para os dedos
+                // caberem, exatamente como o MediaPipe faz
+                Vector2 centroPx = pulsoPx + direcao * 0.9f;
+                Vector2 centroDaPalma = new Vector2(centroPx.x / larguraDoQuadro,
+                                                    centroPx.y / alturaDoQuadro);
+                float ladoDesejado = Mathf.Clamp(palmaPx * 3.4f, 180f,
+                                     Mathf.Min(larguraDoQuadro, alturaDoQuadro));
+
+                centroCaixa = Vector2.Lerp(centroCaixa, centroDaPalma, 0.5f);
+                ladoCaixaPx = (ladoCaixaPx <= 0f) ? ladoDesejado
+                                                  : Mathf.Lerp(ladoCaixaPx, ladoDesejado, 0.3f);
+                return; // enquadramento ja definido pela palma
             }
         }
 #endif
