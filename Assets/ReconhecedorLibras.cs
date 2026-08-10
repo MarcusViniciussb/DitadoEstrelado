@@ -33,7 +33,8 @@ public class ReconhecedorLibras : MonoBehaviour
 
     [Header("Classificacao kNN")]
     [Range(1, 9)]   public int   vizinhosK      = 5;     // quantas amostras próximas votam
-    [Range(0f, 3f)] public float pesoDosAngulos = 0.25f; // importância dos ângulos vs posições
+    [Range(0f, 3f)] public float pesoDosAngulos  = 0.25f; // importância dos ângulos vs posições
+    [Range(0f, 3f)] public float pesoDosContatos = 0.5f;  // importância do que encosta em quê
 
     // ── Compatibilidade do celular (nao afeta o computador) ─────────────────
     //
@@ -109,6 +110,35 @@ public class ReconhecedorLibras : MonoBehaviour
         {1,5}, {5,9}, {9,13}, {13,17}
     };
 
+    // Contatos: distâncias entre pontas de dedos e entre elas e o polegar.
+    // Boa parte das letras se distingue justamente por ISSO - o que encosta em
+    // quê. C e O têm a mesma forma geral: no O o polegar fecha o círculo, no C
+    // fica um vão. Medido junto com as outras 21 posições, esse detalhe se
+    // dilui; medido à parte, ele pesa no resultado.
+    private static readonly int[,] PARES_CONTATO =
+    {
+        // Polegar até cada ponta de dedo (fecha o círculo? encosta?)
+        {4,8}, {4,12}, {4,16}, {4,20},
+        // Pontas vizinhas (dedos juntos ou separados: U, V, R)
+        {8,12}, {12,16}, {16,20},
+        // Polegar até a base de cada dedo (polegar por dentro ou por fora: A, S, M, N)
+        {4,5}, {4,9}, {4,13}, {4,17},
+        // Ponta até a própria base (dedo esticado ou dobrado)
+        {8,5}, {12,9}, {16,13}, {20,17},
+    };
+
+    // Recebe as posições JÁ normalizadas pelo tamanho da mão, então as
+    // distâncias saem na mesma escala para mão grande ou pequena, perto ou longe
+    static float[] ExtrairContatos(Vector3[] normalizados)
+    {
+        int n = PARES_CONTATO.GetLength(0);
+        var contatos = new float[n];
+        for (int i = 0; i < n; i++)
+            contatos[i] = Vector3.Distance(normalizados[PARES_CONTATO[i, 0]],
+                                           normalizados[PARES_CONTATO[i, 1]]);
+        return contatos;
+    }
+
     // Extrai todos os ângulos (em radianos) de uma mão
     static float[] ExtrairAngulos(Vector3[] p)
     {
@@ -132,7 +162,9 @@ public class ReconhecedorLibras : MonoBehaviour
     }
 
     // Distância combinada: formato (posições) + curvatura dos dedos (ângulos)
-    float DistanciaEntre(Vector3[] posA, float[] angA, Vector3[] posB, float[] angB)
+    //                      + contatos entre dedos
+    float DistanciaEntre(Vector3[] posA, float[] angA, float[] conA,
+                         Vector3[] posB, float[] angB, float[] conB)
     {
         float distPosicoes = 0f;
         for (int i = 0; i < 21; i++)
@@ -142,7 +174,11 @@ public class ReconhecedorLibras : MonoBehaviour
         for (int i = 0; i < angA.Length; i++)
             distAngulos += Mathf.Abs(angA[i] - angB[i]);
 
-        return distPosicoes + pesoDosAngulos * distAngulos;
+        float distContatos = 0f;
+        for (int i = 0; i < conA.Length; i++)
+            distContatos += Mathf.Abs(conA[i] - conB[i]);
+
+        return distPosicoes + pesoDosAngulos * distAngulos + pesoDosContatos * distContatos;
     }
 
     [Header("Liga o log 'Mais parecido: X (distancia Y)' no Console")]
@@ -350,6 +386,7 @@ public class ReconhecedorLibras : MonoBehaviour
         for (int i = 0; i < 21; i++) rel[i] = corrigidos[i] - pulso;
         Vector3[] atualPos = NormalizarEscala(EndireitarPalma(rel));
         float[]   atualAng = ExtrairAngulos(corrigidos);
+        float[]   atualCon = ExtrairContatos(atualPos);
 
         // Distância da mão atual até TODAS as amostras gravadas
         var candidatos = new List<KeyValuePair<float, string>>();
@@ -359,7 +396,9 @@ public class ReconhecedorLibras : MonoBehaviour
             for (int i = 0; i < 21; i++) amostra[i] = DoBanco(padrao.pontosNormalizados[i]);
             Vector3[] padraoPos = NormalizarEscala(EndireitarPalma(amostra));
             float[]   padraoAng = ExtrairAngulos(amostra);
-            float dist = DistanciaEntre(atualPos, atualAng, padraoPos, padraoAng);
+            float[]   padraoCon = ExtrairContatos(padraoPos);
+            float dist = DistanciaEntre(atualPos, atualAng, atualCon,
+                                        padraoPos, padraoAng, padraoCon);
             candidatos.Add(new KeyValuePair<float, string>(dist, padrao.nome));
         }
         candidatos.Sort((a, b) => a.Key.CompareTo(b.Key));

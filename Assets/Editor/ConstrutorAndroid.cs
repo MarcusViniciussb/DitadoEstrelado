@@ -16,6 +16,9 @@ public static class ConstrutorAndroid
     [MenuItem("Ditado Estrelado/Gerar APK para Android")]
     public static void Construir()
     {
+        // O icone e aplicado aqui para nunca sair um APK com a marca antiga
+        ConfigurarIcones.Aplicar();
+
         // Ajustes que precisam valer no momento da compilacao
         PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
         PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
