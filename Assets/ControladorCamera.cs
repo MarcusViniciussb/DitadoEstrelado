@@ -84,28 +84,30 @@ public class ControladorCamera : MonoBehaviour
     public bool zoomInteligente = true;
     [Range(1.5f, 4f)] public float margemDoZoom = 2.4f; // recorte = tamanho da mão × margem
 
-    // Correcao de giro da camera (essencial no celular, onde o sensor entrega
-    // a imagem deitada). O quadro endireitado alimenta o detector E a tela.
+    // ── Suporte ao celular ──────────────────────────────────────────────────
+    // Tudo daqui so entra em acao na compilacao para Android. No computador
+    // estes campos ficam inertes e o caminho percorrido e o de sempre.
     private Material materialDeGiro;
     private RenderTexture texturaExibicao;
     private float larguraDoQuadro = 0f, alturaDoQuadro = 0f;
+    private float anguloDaMao = 0f;
+    private bool  alinharMao  = false;
 
-    // Ajuste da imagem da camera. O aparelho informa valores em Giro e
-    // InverterVertical, mas cada modelo de celular relata isso de um jeito;
-    // por isso os tres campos podem ser corrigidos pelo painel de opcoes.
-    public int  GiroDaCamera        { get; private set; }
-    public bool InverterVertical    { get; private set; }
-    public bool InverterHorizontal  { get; private set; }
+    public int  GiroDaCamera       { get; private set; }
+    public bool InverterVertical   { get; private set; }
+    public bool InverterHorizontal { get; private set; }
 
     public void DefinirAjusteDaCamera(int giro, bool vertical, bool horizontal)
     {
         GiroDaCamera       = ((giro % 360) + 360) % 360;
         InverterVertical   = vertical;
         InverterHorizontal = horizontal;
+#if UNITY_ANDROID && !UNITY_EDITOR
         AtualizarTamanhoDoQuadro();
+#endif
     }
 
-    // Informacoes para o painel de diagnostico
+    // Informacoes do painel de diagnostico
     public string FonteDeRastreamento =>
         usandoExterno ? "externa (MediaPipe)" : (detetivePronto ? "interna" : "iniciando");
     public float ConfiancaAtual =>
@@ -119,14 +121,7 @@ public class ControladorCamera : MonoBehaviour
     private float   ladoCaixaPx = 0f;                        // lado do recorte em px (0 = busca ampla)
     private Vector2 escalaBlit  = Vector2.one;               // último recorte aplicado
     private Vector2 offsetBlit  = Vector2.zero;              //   (para mapear pontos de volta)
-    private float   tempoSemMao = 0f;
-
-    // Alinhamento da mao: o modelo de pontos foi treinado com a mao em pe.
-    // Girando o recorte para deixar a mao sempre na vertical, o modelo passa
-    // a enxergar o que espera, mesmo com a mao inclinada ou de lado.
-    // Usado apenas no celular, onde nao existe o rastreador externo.
-    private float anguloDaMao = 0f;
-    private bool  alinharMao  = false;
+    private int     framesSemMao = 0;
 
     private WebCamTexture minhaCamera;
     private HandLandmarkDetector detetive;
@@ -157,51 +152,19 @@ public class ControladorCamera : MonoBehaviour
 
     void Start()
     {
-#if UNITY_ANDROID || UNITY_IOS
-        // No celular nao existe o rastreador em Python: o reconhecimento roda
-        // dentro do proprio aplicativo, entao vamos direto para a camera
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // No celular nao existe o rastreador em Python
         StartCoroutine(PrepararCameraDoCelular());
-#else
+        return;
+#pragma warning disable 0162
+#endif
         if (rastreadorExterno != null && rastreadorExterno.enabled)
             StartCoroutine(EscolherFonteDeRastreamento());
         else
             IniciarCameraInterna();
-#endif
-    }
-
-    // Pede a permissao de camera e so entao liga a captura
-    IEnumerator PrepararCameraDoCelular()
-    {
 #if UNITY_ANDROID && !UNITY_EDITOR
-        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(
-                UnityEngine.Android.Permission.Camera))
-        {
-            UnityEngine.Android.Permission.RequestUserPermission(
-                UnityEngine.Android.Permission.Camera);
-
-            // Espera o usuario responder (com limite, para nao travar)
-            float limite = Time.realtimeSinceStartup + 30f;
-            while (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(
-                       UnityEngine.Android.Permission.Camera) &&
-                   Time.realtimeSinceStartup < limite)
-                yield return null;
-        }
-#else
-        yield return Application.RequestUserAuthorization(UserAuthorization.WebCam);
+#pragma warning restore 0162
 #endif
-        IniciarCameraInterna();
-    }
-
-    // Procura a camera frontal (a de trás nao serve para o jogador se ver)
-    string EscolherCamera()
-    {
-        var lista = WebCamTexture.devices;
-        if (lista == null || lista.Length == 0) return null;
-
-        foreach (var d in lista)
-            if (d.isFrontFacing) return d.name;
-
-        return lista[0].name;
     }
 
     // Fluxo de escolha da fonte de rastreamento:
@@ -396,16 +359,12 @@ public class ControladorCamera : MonoBehaviour
             return;
         }
 
-        // No computador vale pedir mais resolucao; no celular uma imagem menor
-        // rende bem mais quadros por segundo, que e o que importa aqui
-#if UNITY_ANDROID || UNITY_IOS
-        // Resolucao maior da mais detalhe ao recorte que a IA analisa. O custo
-        // e baixo porque o modelo so recebe o quadrado recortado, nao o quadro
-        // inteiro. Se o aparelho nao suportar, o Unity escolhe a mais proxima.
+        // 1280x720: imagem mais nítida na tela e mais detalhe para a IA
+        // (se a webcam não suportar, o Unity escolhe a resolução mais próxima)
+#if UNITY_ANDROID && !UNITY_EDITOR
         string camera = EscolherCamera();
         minhaCamera = (camera == null) ? new WebCamTexture(1280, 720)
                                        : new WebCamTexture(camera, 1280, 720, 30);
-        Application.targetFrameRate = 60; // nao segura o jogo em 30
 #else
         minhaCamera = new WebCamTexture(1280, 720);
 #endif
@@ -415,6 +374,118 @@ public class ControladorCamera : MonoBehaviour
 
         StartCoroutine(InicializarDetetiveAposCamera());
     }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+    // ── Camera do celular ───────────────────────────────────────────────────
+
+    IEnumerator PrepararCameraDoCelular()
+    {
+        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(
+                UnityEngine.Android.Permission.Camera))
+        {
+            UnityEngine.Android.Permission.RequestUserPermission(
+                UnityEngine.Android.Permission.Camera);
+
+            float limite = Time.realtimeSinceStartup + 30f;
+            while (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(
+                       UnityEngine.Android.Permission.Camera) &&
+                   Time.realtimeSinceStartup < limite)
+                yield return null;
+        }
+
+        Application.targetFrameRate = 60;
+        alinharMao = true;   // o modelo do celular espera a mao em pe
+        zoomDaTela = 1.35f;  // mais folga para a mao nos cantos da tela
+        IniciarCameraInterna();
+    }
+
+    string EscolherCamera()
+    {
+        var lista = WebCamTexture.devices;
+        if (lista == null || lista.Length == 0) return null;
+        foreach (var d in lista)
+            if (d.isFrontFacing) return d.name;
+        return lista[0].name;
+    }
+
+    // Descobre o giro do sensor e prepara a textura ja endireitada
+    void PrepararCorrecaoDeGiro()
+    {
+        GiroDaCamera       = 90;    // valor que corresponde ao sensor na pratica
+        InverterVertical   = false;
+        InverterHorizontal = false;
+
+        if (PlayerPrefs.HasKey("camGiro"))
+        {
+            GiroDaCamera       = PlayerPrefs.GetInt("camGiro", 90);
+            InverterVertical   = PlayerPrefs.GetInt("camInvV", 0) == 1;
+            InverterHorizontal = PlayerPrefs.GetInt("camInvH", 0) == 1;
+        }
+
+        AtualizarTamanhoDoQuadro();
+
+        var shader = Resources.Load<Shader>("RotacaoCamera");
+        if (shader == null)
+        {
+            Debug.LogWarning("Shader de giro nao encontrado.");
+            return;
+        }
+
+        materialDeGiro  = new Material(shader);
+        texturaExibicao = new RenderTexture((int)larguraDoQuadro, (int)alturaDoQuadro, 0);
+        texturaExibicao.wrapMode = TextureWrapMode.Clamp;
+        fundoDoEcra.texture = texturaExibicao;
+    }
+
+    void AtualizarTamanhoDoQuadro()
+    {
+        if (minhaCamera == null || minhaCamera.width < 100) return;
+
+        bool deitada = (GiroDaCamera == 90 || GiroDaCamera == 270);
+        larguraDoQuadro = deitada ? minhaCamera.height : minhaCamera.width;
+        alturaDoQuadro  = deitada ? minhaCamera.width  : minhaCamera.height;
+
+        if (texturaExibicao != null &&
+            (texturaExibicao.width  != (int)larguraDoQuadro ||
+             texturaExibicao.height != (int)alturaDoQuadro))
+        {
+            texturaExibicao.Release();
+            texturaExibicao = new RenderTexture((int)larguraDoQuadro, (int)alturaDoQuadro, 0);
+            texturaExibicao.wrapMode = TextureWrapMode.Clamp;
+            fundoDoEcra.texture = texturaExibicao;
+        }
+        larguraTelaAnterior = 0; // obriga o recorte de tela a recalcular
+    }
+
+    // Converte um ponto do quadro endireitado para a imagem original
+    Vector2 ParaFonte(Vector2 uvEndireitado)
+    {
+        float rad = GiroDaCamera * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rad), sin = Mathf.Sin(rad);
+
+        Vector2 p = new Vector2((uvEndireitado.x - 0.5f) * larguraDoQuadro,
+                                (uvEndireitado.y - 0.5f) * alturaDoQuadro);
+        Vector2 g = new Vector2(p.x * cos + p.y * sin, -p.x * sin + p.y * cos);
+        if (InverterHorizontal) g.x = -g.x;
+        if (InverterVertical)   g.y = -g.y;
+
+        return new Vector2(0.5f + g.x / minhaCamera.width,
+                           0.5f + g.y / minhaCamera.height);
+    }
+
+    void CopiarComGiro(RenderTexture destino, Vector2 centro, Vector2 tamanhoEmPixels,
+                       float grausExtra = 0f)
+    {
+        float rad = (GiroDaCamera + grausExtra) * Mathf.Deg2Rad;
+        materialDeGiro.SetVector("_Giro", new Vector4(Mathf.Cos(rad), Mathf.Sin(rad), 0, 0));
+        materialDeGiro.SetVector("_Centro", new Vector4(centro.x, centro.y, 0, 0));
+        materialDeGiro.SetVector("_Tamanhos", new Vector4(
+            tamanhoEmPixels.x, tamanhoEmPixels.y, minhaCamera.width, minhaCamera.height));
+        materialDeGiro.SetVector("_Espelho", new Vector4(
+            InverterHorizontal ? -1f : 1f, InverterVertical ? -1f : 1f, 0, 0));
+        Graphics.Blit(minhaCamera, destino, materialDeGiro);
+    }
+#endif
 
     // Aguarda câmera ter dimensões reais antes de criar o detector.
     // WebCamTexture começa com 16x16 de placeholder - criar o detector nesse momento causaria crash.
@@ -427,7 +498,9 @@ public class ControladorCamera : MonoBehaviour
 
         yield return new WaitForEndOfFrame();
 
+#if UNITY_ANDROID && !UNITY_EDITOR
         PrepararCorrecaoDeGiro();
+#endif
 
         try
         {
@@ -516,12 +589,8 @@ public class ControladorCamera : MonoBehaviour
         // Detecção com histerese: precisa de confiança ALTA (0.6) para começar,
         // mas só solta quando cair BEM (0.45). Isso elimina o pisca-pisca do
         // esqueleto quando a confiança fica oscilando perto do limite.
-        // No celular a imagem tem mais ruido e a confianca oscila mais; segurar
-        // um pouco mais a mao ja detectada evita o rastreio piscando
         float confianca = usandoExterno ? rastreadorExterno.Score : detetive.Score;
-        float limiteEntrada = Application.isMobilePlatform ? 0.5f  : 0.6f;
-        float limiteSaida   = Application.isMobilePlatform ? 0.32f : 0.45f;
-        MaoDetectada = MaoDetectada ? (confianca >= limiteSaida) : (confianca >= limiteEntrada);
+        MaoDetectada = MaoDetectada ? (confianca >= 0.45f) : (confianca >= 0.6f);
 
         if (!MaoDetectada)
         {
@@ -532,46 +601,35 @@ public class ControladorCamera : MonoBehaviour
 
             // Perdeu a mão (rastreador interno): depois de ~15 frames volta à
             // "busca ampla" (recorte grande no centro) para reencontrá-la
-            // Perdeu a mao: volta a busca ampla depois de meio segundo.
-            // Contar TEMPO em vez de quadros mantem a resposta igual no
-            // celular, que roda com menos quadros por segundo.
             if (!usandoExterno)
             {
-                tempoSemMao += Time.deltaTime;
-                if (tempoSemMao > 0.5f)
+                framesSemMao++;
+                if (framesSemMao > 15)
                 {
                     centroCaixa = new Vector2(0.5f, 0.5f);
                     ladoCaixaPx = 0f;
-                    anguloDaMao = 0f; // volta a procurar a mao sem girar nada
+                    anguloDaMao = 0f;
                 }
             }
             return;
         }
-        tempoSemMao = 0f;
+        framesSemMao = 0;
 
         Vector3[] pontosDaMao = usandoExterno
             ? (Vector3[])rastreadorExterno.Pontos.Clone()
             : ColetarPontosDaMao();
         PontosDaMaoAtuais = pontosDaMao;
 
-        // Informa ao reconhecedor em que "formato" os pontos chegam: a
-        // proporcao do quadro e se ha profundidade. Sem isso, o mesmo sinal
-        // feito no computador e no celular vira dois padroes diferentes.
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // Informa ao reconhecedor em que formato os pontos chegam
         if (reconhecedor != null)
         {
-            if (usandoExterno)
-            {
-                reconhecedor.aspectoDaCamera = 4f / 3f; // quadro do rastreador externo
-                reconhecedor.temProfundidade = true;
-            }
-            else
-            {
-                reconhecedor.aspectoDaCamera = (alturaDoQuadro > 0f)
-                    ? larguraDoQuadro / alturaDoQuadro
-                    : (float)minhaCamera.width / minhaCamera.height;
-                reconhecedor.temProfundidade = false; // o detector interno nao entrega z
-            }
+            reconhecedor.aspectoDaCamera = (alturaDoQuadro > 0f)
+                ? larguraDoQuadro / alturaDoQuadro
+                : (float)minhaCamera.width / minhaCamera.height;
+            reconhecedor.temProfundidade = false; // o detector interno nao entrega z
         }
+#endif
 
         // Alimenta a memória de movimento (~15 quadros por segundo)
         AlimentarJanelaDeMovimento(pontosDaMao);
@@ -697,9 +755,13 @@ public class ControladorCamera : MonoBehaviour
         else
         {
             if (minhaCamera == null || minhaCamera.width < 100) return;
-            // Depois do giro a imagem pode ter trocado de lado
+#if UNITY_ANDROID && !UNITY_EDITOR
             larguraFonte = (larguraDoQuadro > 0f) ? larguraDoQuadro : minhaCamera.width;
             alturaFonte  = (alturaDoQuadro  > 0f) ? alturaDoQuadro  : minhaCamera.height;
+#else
+            larguraFonte = minhaCamera.width;
+            alturaFonte  = minhaCamera.height;
+#endif
         }
 
         if (Screen.width == larguraTelaAnterior && Screen.height == alturaTelaAnterior &&
@@ -732,152 +794,32 @@ public class ControladorCamera : MonoBehaviour
         fundoDoEcra.uvRect = uvRecorte;
     }
 
-    // Descobre o giro que a camera aplica e prepara a textura ja endireitada.
-    // No computador o giro costuma ser zero e nada muda.
-    void PrepararCorrecaoDeGiro()
-    {
-        // Valores sugeridos pelo aparelho, que o usuario pode corrigir depois
-        GiroDaCamera       = ((minhaCamera.videoRotationAngle % 360) + 360) % 360;
-        InverterVertical   = minhaCamera.videoVerticallyMirrored;
-        InverterHorizontal = false;
-
-        // No celular o valor informado pelo sensor nao corresponde ao que
-        // aparece na tela: 90 graus e o giro que funciona na pratica
-        if (Application.isMobilePlatform)
-        {
-            GiroDaCamera     = 90;
-            InverterVertical = false;
-
-            // A tela mostra uma fatia menor do sensor, sobrando mais folga
-            // para a mao continuar visivel quando vai para os cantos
-            zoomDaTela = 1.35f;
-
-            // O rastreador do celular e so o modelo de pontos, sem o estagio
-            // que o MediaPipe usa para endireitar a mao. Fazemos esse
-            // alinhamento aqui, girando o recorte a cada quadro.
-            alinharMao = true;
-        }
-
-        // Preferencias salvas de uma sessao anterior tem prioridade
-        if (PlayerPrefs.HasKey("camGiro"))
-        {
-            GiroDaCamera       = PlayerPrefs.GetInt("camGiro", GiroDaCamera);
-            InverterVertical   = PlayerPrefs.GetInt("camInvV", InverterVertical ? 1 : 0) == 1;
-            InverterHorizontal = PlayerPrefs.GetInt("camInvH", 0) == 1;
-        }
-
-        AtualizarTamanhoDoQuadro();
-
-        // No celular a correcao fica sempre ligada, para o ajuste pela tela
-        // funcionar mesmo que o aparelho tenha informado giro zero
-        bool precisaCorrigir = Application.isMobilePlatform ||
-                               GiroDaCamera != 0 || InverterVertical || InverterHorizontal;
-
-        if (!precisaCorrigir)
-        {
-            fundoDoEcra.texture = minhaCamera;
-            Debug.Log("Camera sem giro: " + ResolucaoDaCamera);
-            return;
-        }
-
-        var shader = Resources.Load<Shader>("RotacaoCamera");
-        if (shader == null)
-        {
-            Debug.LogWarning("Shader de giro nao encontrado; a imagem pode aparecer deitada.");
-            return;
-        }
-
-        materialDeGiro  = new Material(shader);
-        texturaExibicao = new RenderTexture((int)larguraDoQuadro, (int)alturaDoQuadro, 0);
-        texturaExibicao.wrapMode = TextureWrapMode.Clamp;
-        fundoDoEcra.texture = texturaExibicao;
-
-        Debug.Log("Camera: giro " + GiroDaCamera + ", inverter V " + InverterVertical +
-                  ", H " + InverterHorizontal + ", quadro " +
-                  larguraDoQuadro + "x" + alturaDoQuadro);
-    }
-
-    void AtualizarTamanhoDoQuadro()
-    {
-        if (minhaCamera == null || minhaCamera.width < 100) return;
-
-        bool deitada = (GiroDaCamera == 90 || GiroDaCamera == 270);
-        larguraDoQuadro = deitada ? minhaCamera.height : minhaCamera.width;
-        alturaDoQuadro  = deitada ? minhaCamera.width  : minhaCamera.height;
-
-        // A textura de exibicao acompanha a troca de lados
-        if (texturaExibicao != null &&
-            (texturaExibicao.width != (int)larguraDoQuadro ||
-             texturaExibicao.height != (int)alturaDoQuadro))
-        {
-            texturaExibicao.Release();
-            texturaExibicao = new RenderTexture((int)larguraDoQuadro, (int)alturaDoQuadro, 0);
-            texturaExibicao.wrapMode = TextureWrapMode.Clamp;
-            fundoDoEcra.texture = texturaExibicao;
-        }
-
-        // Obriga o recorte de tela a ser recalculado
-        larguraTelaAnterior = 0;
-    }
-
-    // Converte um ponto do quadro ENDIREITADO para a imagem ORIGINAL da camera.
-    // O recorte da mao e calculado no quadro endireitado, mas quem le a imagem
-    // e o shader, que trabalha sobre a imagem crua: sem esta conversao o
-    // recorte busca o pedaco errado assim que a mao sai do centro.
-    Vector2 ParaFonte(Vector2 uvEndireitado)
-    {
-        float rad = GiroDaCamera * Mathf.Deg2Rad;
-        float cos = Mathf.Cos(rad), sin = Mathf.Sin(rad);
-
-        Vector2 p = new Vector2((uvEndireitado.x - 0.5f) * larguraDoQuadro,
-                                (uvEndireitado.y - 0.5f) * alturaDoQuadro);
-        Vector2 g = new Vector2(p.x * cos + p.y * sin, -p.x * sin + p.y * cos);
-        if (InverterHorizontal) g.x = -g.x;
-        if (InverterVertical)   g.y = -g.y;
-
-        return new Vector2(0.5f + g.x / minhaCamera.width,
-                           0.5f + g.y / minhaCamera.height);
-    }
-
-    // Aplica giro, inversoes e recorte de uma vez so
-    void CopiarComGiro(RenderTexture destino, Vector2 centro, Vector2 tamanhoEmPixels,
-                       float grausExtra = 0f)
-    {
-        float rad = (GiroDaCamera + grausExtra) * Mathf.Deg2Rad;
-        materialDeGiro.SetVector("_Giro", new Vector4(Mathf.Cos(rad), Mathf.Sin(rad), 0, 0));
-        materialDeGiro.SetVector("_Centro", new Vector4(centro.x, centro.y, 0, 0));
-        materialDeGiro.SetVector("_Tamanhos", new Vector4(
-            tamanhoEmPixels.x, tamanhoEmPixels.y,
-            minhaCamera.width, minhaCamera.height));
-        materialDeGiro.SetVector("_Espelho", new Vector4(
-            InverterHorizontal ? -1f : 1f, InverterVertical ? -1f : 1f, 0, 0));
-        Graphics.Blit(minhaCamera, destino, materialDeGiro);
-    }
-
     // Prepara a imagem e envia para a IA.
     // Com zoom inteligente: recorta um quadrado ao redor da mão (Graphics.Blit)
     // e envia só ele - a mão ocupa a imagem inteira e o modelo enxerga MUITO melhor.
     void ProcessarFrame()
     {
-        // Primeiro endireita o quadro para a tela (quando ha giro a corrigir)
-        if (materialDeGiro != null && texturaExibicao != null)
-            CopiarComGiro(texturaExibicao, ParaFonte(new Vector2(0.5f, 0.5f)),
-                          new Vector2(larguraDoQuadro, alturaDoQuadro));
-
         if (!zoomInteligente)
         {
             escalaBlit = Vector2.one;
             offsetBlit = Vector2.zero;
-            detetive.ProcessImage(FonteParaIA());
+            detetive.ProcessImage(minhaCamera);
             return;
         }
 
         if (texturaRecorte == null)
             texturaRecorte = new RenderTexture(320, 320, 0);
 
-        // Trabalha sempre no quadro JA endireitado
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (materialDeGiro != null && texturaExibicao != null)
+            CopiarComGiro(texturaExibicao, ParaFonte(new Vector2(0.5f, 0.5f)),
+                          new Vector2(larguraDoQuadro, alturaDoQuadro));
         float w = larguraDoQuadro > 0f ? larguraDoQuadro : minhaCamera.width;
         float h = alturaDoQuadro  > 0f ? alturaDoQuadro  : minhaCamera.height;
+#else
+        float w = minhaCamera.width;
+        float h = minhaCamera.height;
+#endif
 
         // Sem mão rastreada: quadrado grande no centro (área visível da tela).
         // Com mão rastreada: quadrado do tamanho da mão × margem.
@@ -895,28 +837,21 @@ public class ControladorCamera : MonoBehaviour
         offset.x = Mathf.Clamp(offset.x, -escala.x * folga, 1f - escala.x * (1f - folga));
         offset.y = Mathf.Clamp(offset.y, -escala.y * folga, 1f - escala.y * (1f - folga));
 
-        // Com giro a corrigir, o recorte sai direto da camera ja endireitado;
-        // sem giro, o caminho continua sendo o mesmo de antes
+#if UNITY_ANDROID && !UNITY_EDITOR
         if (materialDeGiro != null)
             CopiarComGiro(texturaRecorte,
                           ParaFonte(new Vector2(offset.x + escala.x * 0.5f,
                                                 offset.y + escala.y * 0.5f)),
-                          new Vector2(lado, lado),
-                          alinharMao ? anguloDaMao : 0f);
+                          new Vector2(lado, lado), alinharMao ? anguloDaMao : 0f);
         else
             Graphics.Blit(minhaCamera, texturaRecorte, escala, offset);
-
+#else
+        Graphics.Blit(minhaCamera, texturaRecorte, escala, offset);
+#endif
         detetive.ProcessImage(texturaRecorte);
 
         escalaBlit = escala;
         offsetBlit = offset;
-    }
-
-    // Textura que representa o quadro endireitado (ou a camera crua, se nao
-    // houver giro a corrigir)
-    Texture FonteParaIA()
-    {
-        return (texturaExibicao != null) ? (Texture)texturaExibicao : minhaCamera;
     }
 
     // Recalcula a caixa de recorte a partir da mão detectada (com suavização,
@@ -932,6 +867,7 @@ public class ControladorCamera : MonoBehaviour
             if (pontos[i].y > maxY) maxY = pontos[i].y;
         }
 
+#if UNITY_ANDROID && !UNITY_EDITOR
         // Angulo da mao: direcao do pulso ate a base do dedo medio. Girando o
         // recorte por 90 graus menos esse angulo, a mao chega em pe ao modelo.
         if (alinharMao)
@@ -943,10 +879,10 @@ public class ControladorCamera : MonoBehaviour
             if (direcao.sqrMagnitude > 0.0001f)
             {
                 float desejado = 90f - Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg;
-                // Suaviza pelo caminho mais curto, para o recorte nao saltar
                 anguloDaMao = Mathf.LerpAngle(anguloDaMao, desejado, 0.35f);
             }
         }
+#endif
 
         Vector2 centro = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
         float larguraPx = (maxX - minX) * minhaCamera.width;
@@ -973,21 +909,23 @@ public class ControladorCamera : MonoBehaviour
         for (int i = 0; i < valores.Length; i++)
         {
             Vector2 v2 = detetive.GetKeyPoint(valores[i]);
-            // O recorte pode ter sido girado para alinhar a mao; aqui o ponto
-            // volta para o sistema do quadro, desfazendo esse giro
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // O recorte pode ter girado para alinhar a mao: desfaz aqui
             float cx = v2.x - 0.5f, cy = v2.y - 0.5f;
             if (alinharMao && Mathf.Abs(anguloDaMao) > 0.01f)
             {
-                float r = anguloDaMao * Mathf.Deg2Rad;
+                float r  = anguloDaMao * Mathf.Deg2Rad;
                 float co = Mathf.Cos(r), se = Mathf.Sin(r);
                 float rx =  cx * co + cy * se;
                 float ry = -cx * se + cy * co;
                 cx = rx; cy = ry;
             }
-
-            pontos[i] = new Vector3(
-                offsetBlit.x + escalaBlit.x * (0.5f + cx),
-                offsetBlit.y + escalaBlit.y * (0.5f + cy), 0f);
+            pontos[i] = new Vector3(offsetBlit.x + escalaBlit.x * (0.5f + cx),
+                                    offsetBlit.y + escalaBlit.y * (0.5f + cy), 0f);
+#else
+            pontos[i] = new Vector3(offsetBlit.x + v2.x * escalaBlit.x,
+                                    offsetBlit.y + v2.y * escalaBlit.y, 0f);
+#endif
         }
         return pontos;
     }
