@@ -16,32 +16,38 @@ public class ReconhecedorLibras : MonoBehaviour
     [Range(1, 7)]   public int   vizinhosK      = 3;    // quantas amostras próximas votam
     [Range(0f, 3f)] public float pesoDosAngulos = 0.5f; // importância dos ângulos vs posições
 
-    // ── Compatibilidade entre cameras e plataformas ─────────────────────────
+    // ── Compatibilidade do celular (nao afeta o computador) ─────────────────
     //
-    // As coordenadas chegam normalizadas de 0 a 1 sobre o quadro, entao um
-    // quadro deitado e um em pe deformam a mesma mao de formas diferentes.
+    // O banco de sinais foi gravado no computador, com o rastreador completo:
+    // quadro 4:3 e com profundidade. No celular o quadro fica em pe e o
+    // rastreador nao fornece profundidade, entao os pontos precisam ser
+    // levados ao mesmo formato do banco antes de comparar.
     //
-    // A correcao leva o que a camera atual entrega para o MESMO formato em que
-    // o banco foi gravado (quadro 4:3 do rastreador do computador). Quando a
-    // camera ja e 4:3, o fator vale 1 e nada muda: o computador se comporta
-    // exatamente como antes desta correcao existir.
+    // Em qualquer plataforma que nao seja o celular, os metodos abaixo
+    // devolvem o ponto sem tocar em nada: o computador roda exatamente o
+    // mesmo caminho de antes desta compatibilizacao existir.
     const float ASPECTO_DO_BANCO = 4f / 3f;
 
     [HideInInspector] public float aspectoDaCamera = ASPECTO_DO_BANCO;
     [HideInInspector] public bool  temProfundidade = true;
 
-    // Ponto vindo da camera agora: leva ao formato do banco e trata a
-    // profundidade, que o rastreador do celular nao fornece
     Vector3 DaCamera(Vector3 p)
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
         float fator = aspectoDaCamera / ASPECTO_DO_BANCO;
         return new Vector3(p.x * fator, p.y, temProfundidade ? p.z : 0f);
+#else
+        return p;
+#endif
     }
 
-    // Ponto do banco: ja esta com a proporcao corrigida desde a gravacao
     Vector3 DoBanco(Vector3 p)
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
         return temProfundidade ? p : new Vector3(p.x, p.y, 0f);
+#else
+        return p;
+#endif
     }
 
     [Header("Letras dinamicas (gravadas como MOVIMENTO, nao como foto)")]
@@ -187,9 +193,9 @@ public class ReconhecedorLibras : MonoBehaviour
         novaLetra.pontosNormalizados = new Vector3[21];
 
         // Normaliza pela posição do pulso (ponto 0)
-        Vector3 pulso = DaCamera(pontosAtuais[0]);
+        Vector3 pulso = pontosAtuais[0];
         for (int i = 0; i < 21; i++)
-            novaLetra.pontosNormalizados[i] = DaCamera(pontosAtuais[i]) - pulso;
+            novaLetra.pontosNormalizados[i] = pontosAtuais[i] - pulso;
 
         bancoDeDados.letrasGravadas.Add(novaLetra);
 
@@ -212,6 +218,11 @@ public class ReconhecedorLibras : MonoBehaviour
     {
         if (bancoDeDados == null) return;
 
+        // O banco so cresce durante o treinamento no computador. No celular a
+        // gravacao ficaria apenas na memoria e, pior, poderia misturar
+        // amostras de formatos diferentes no mesmo conjunto.
+        if (Application.isMobilePlatform) return;
+
         int total = 0;
         foreach (var l in bancoDeDados.letrasGravadas)
             if (l.nome == nomeDaLetra) total++;
@@ -221,9 +232,9 @@ public class ReconhecedorLibras : MonoBehaviour
         var novaLetra = new AlfabetoData.LetraPadrao();
         novaLetra.nome = nomeDaLetra;
         novaLetra.pontosNormalizados = new Vector3[21];
-        Vector3 pulso = DaCamera(pontosAtuais[0]);
+        Vector3 pulso = pontosAtuais[0];
         for (int i = 0; i < 21; i++)
-            novaLetra.pontosNormalizados[i] = DaCamera(pontosAtuais[i]) - pulso;
+            novaLetra.pontosNormalizados[i] = pontosAtuais[i] - pulso;
 
         bancoDeDados.letrasGravadas.Add(novaLetra);
 
@@ -254,8 +265,8 @@ public class ReconhecedorLibras : MonoBehaviour
         {
             // Cada quadro fica relativo ao pulso (igual às letras estáticas)
             var relativo = new Vector3[21];
-            Vector3 pulso = DaCamera(absoluto[0]);
-            for (int i = 0; i < 21; i++) relativo[i] = DaCamera(absoluto[i]) - pulso;
+            Vector3 pulso = absoluto[0];
+            for (int i = 0; i < 21; i++) relativo[i] = absoluto[i] - pulso;
             sinal.quadros.Add(new AlfabetoData.QuadroDeMao { pontos = relativo });
         }
         bancoDeDados.sinaisDinamicos.Add(sinal);
@@ -296,8 +307,7 @@ public class ReconhecedorLibras : MonoBehaviour
     {
         if (bancoDeDados == null || bancoDeDados.letrasGravadas.Count == 0) return "Nenhuma";
 
-        // Características da mão atual: proporção e profundidade acertadas,
-        // posições normalizadas pelo tamanho da mão e ângulos das articulações
+        // Características da mão atual: posições normalizadas + ângulos
         Vector3[] corrigidos = new Vector3[21];
         for (int i = 0; i < 21; i++) corrigidos[i] = DaCamera(pontosAtuais[i]);
 
