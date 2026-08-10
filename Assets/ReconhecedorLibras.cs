@@ -16,6 +16,30 @@ public class ReconhecedorLibras : MonoBehaviour
     [Range(1, 7)]   public int   vizinhosK      = 3;    // quantas amostras próximas votam
     [Range(0f, 3f)] public float pesoDosAngulos = 0.5f; // importância dos ângulos vs posições
 
+    // ── Compatibilidade entre cameras e plataformas ─────────────────────────
+    //
+    // As coordenadas chegam normalizadas de 0 a 1 sobre o quadro, entao um
+    // quadro deitado e um em pe deformam a mesma mao de formas diferentes.
+    // Multiplicar o eixo X pela proporcao do quadro devolve a forma real.
+    //
+    // Alem disso, o rastreador do computador entrega profundidade e o do
+    // celular nao. Quando falta profundidade, a comparacao passa a ser feita
+    // em duas dimensoes dos DOIS lados, para nunca comparar coisas diferentes.
+    [HideInInspector] public float aspectoDaCamera = 4f / 3f;
+    [HideInInspector] public bool  temProfundidade = true;
+
+    // Ponto vindo da camera agora: corrige proporcao e profundidade
+    Vector3 DaCamera(Vector3 p)
+    {
+        return new Vector3(p.x * aspectoDaCamera, p.y, temProfundidade ? p.z : 0f);
+    }
+
+    // Ponto do banco: ja esta com a proporcao corrigida desde a gravacao
+    Vector3 DoBanco(Vector3 p)
+    {
+        return temProfundidade ? p : new Vector3(p.x, p.y, 0f);
+    }
+
     [Header("Letras dinamicas (gravadas como MOVIMENTO, nao como foto)")]
     // (campo renomeado para o Unity aplicar a lista nova - W e Ç também se movem)
     public string[] letrasComMovimento = { "H", "J", "K", "W", "X", "Z", "Ç" };
@@ -159,9 +183,9 @@ public class ReconhecedorLibras : MonoBehaviour
         novaLetra.pontosNormalizados = new Vector3[21];
 
         // Normaliza pela posição do pulso (ponto 0)
-        Vector3 pulso = pontosAtuais[0];
+        Vector3 pulso = DaCamera(pontosAtuais[0]);
         for (int i = 0; i < 21; i++)
-            novaLetra.pontosNormalizados[i] = pontosAtuais[i] - pulso;
+            novaLetra.pontosNormalizados[i] = DaCamera(pontosAtuais[i]) - pulso;
 
         bancoDeDados.letrasGravadas.Add(novaLetra);
 
@@ -193,9 +217,9 @@ public class ReconhecedorLibras : MonoBehaviour
         var novaLetra = new AlfabetoData.LetraPadrao();
         novaLetra.nome = nomeDaLetra;
         novaLetra.pontosNormalizados = new Vector3[21];
-        Vector3 pulso = pontosAtuais[0];
+        Vector3 pulso = DaCamera(pontosAtuais[0]);
         for (int i = 0; i < 21; i++)
-            novaLetra.pontosNormalizados[i] = pontosAtuais[i] - pulso;
+            novaLetra.pontosNormalizados[i] = DaCamera(pontosAtuais[i]) - pulso;
 
         bancoDeDados.letrasGravadas.Add(novaLetra);
 
@@ -226,8 +250,8 @@ public class ReconhecedorLibras : MonoBehaviour
         {
             // Cada quadro fica relativo ao pulso (igual às letras estáticas)
             var relativo = new Vector3[21];
-            Vector3 pulso = absoluto[0];
-            for (int i = 0; i < 21; i++) relativo[i] = absoluto[i] - pulso;
+            Vector3 pulso = DaCamera(absoluto[0]);
+            for (int i = 0; i < 21; i++) relativo[i] = DaCamera(absoluto[i]) - pulso;
             sinal.quadros.Add(new AlfabetoData.QuadroDeMao { pontos = relativo });
         }
         bancoDeDados.sinaisDinamicos.Add(sinal);
@@ -268,19 +292,25 @@ public class ReconhecedorLibras : MonoBehaviour
     {
         if (bancoDeDados == null || bancoDeDados.letrasGravadas.Count == 0) return "Nenhuma";
 
-        // Características da mão atual: posições normalizadas + ângulos
-        Vector3 pulso = pontosAtuais[0];
+        // Características da mão atual: proporção e profundidade acertadas,
+        // posições normalizadas pelo tamanho da mão e ângulos das articulações
+        Vector3[] corrigidos = new Vector3[21];
+        for (int i = 0; i < 21; i++) corrigidos[i] = DaCamera(pontosAtuais[i]);
+
+        Vector3 pulso = corrigidos[0];
         Vector3[] rel = new Vector3[21];
-        for (int i = 0; i < 21; i++) rel[i] = pontosAtuais[i] - pulso;
+        for (int i = 0; i < 21; i++) rel[i] = corrigidos[i] - pulso;
         Vector3[] atualPos = NormalizarEscala(rel);
-        float[]   atualAng = ExtrairAngulos(pontosAtuais);
+        float[]   atualAng = ExtrairAngulos(corrigidos);
 
         // Distância da mão atual até TODAS as amostras gravadas
         var candidatos = new List<KeyValuePair<float, string>>();
+        var amostra = new Vector3[21];
         foreach (var padrao in bancoDeDados.letrasGravadas)
         {
-            Vector3[] padraoPos = NormalizarEscala(padrao.pontosNormalizados);
-            float[]   padraoAng = ExtrairAngulos(padrao.pontosNormalizados);
+            for (int i = 0; i < 21; i++) amostra[i] = DoBanco(padrao.pontosNormalizados[i]);
+            Vector3[] padraoPos = NormalizarEscala(amostra);
+            float[]   padraoAng = ExtrairAngulos(amostra);
             float dist = DistanciaEntre(atualPos, atualAng, padraoPos, padraoAng);
             candidatos.Add(new KeyValuePair<float, string>(dist, padrao.nome));
         }
@@ -345,8 +375,8 @@ public class ReconhecedorLibras : MonoBehaviour
         foreach (var absoluto in janelaAbsoluta)
         {
             var relativo = new Vector3[21];
-            Vector3 pulso = absoluto[0];
-            for (int i = 0; i < 21; i++) relativo[i] = absoluto[i] - pulso;
+            Vector3 pulso = DaCamera(absoluto[0]);
+            for (int i = 0; i < 21; i++) relativo[i] = DaCamera(absoluto[i]) - pulso;
             janela.Add(NormalizarEscala(relativo));
         }
 
@@ -357,7 +387,11 @@ public class ReconhecedorLibras : MonoBehaviour
         {
             var amostra = new List<Vector3[]>(sinal.quadros.Count);
             foreach (var quadro in sinal.quadros)
-                amostra.Add(NormalizarEscala(quadro.pontos));
+            {
+                var q = new Vector3[21];
+                for (int i = 0; i < 21; i++) q[i] = DoBanco(quadro.pontos[i]);
+                amostra.Add(NormalizarEscala(q));
+            }
 
             float custo = CustoDTW(janela, amostra);
             if (custo < menor)

@@ -546,6 +546,25 @@ public class ControladorCamera : MonoBehaviour
             : ColetarPontosDaMao();
         PontosDaMaoAtuais = pontosDaMao;
 
+        // Informa ao reconhecedor em que "formato" os pontos chegam: a
+        // proporcao do quadro e se ha profundidade. Sem isso, o mesmo sinal
+        // feito no computador e no celular vira dois padroes diferentes.
+        if (reconhecedor != null)
+        {
+            if (usandoExterno)
+            {
+                reconhecedor.aspectoDaCamera = 4f / 3f; // quadro do rastreador externo
+                reconhecedor.temProfundidade = true;
+            }
+            else
+            {
+                reconhecedor.aspectoDaCamera = (alturaDoQuadro > 0f)
+                    ? larguraDoQuadro / alturaDoQuadro
+                    : (float)minhaCamera.width / minhaCamera.height;
+                reconhecedor.temProfundidade = false; // o detector interno nao entrega z
+            }
+        }
+
         // Alimenta a memória de movimento (~15 quadros por segundo)
         AlimentarJanelaDeMovimento(pontosDaMao);
 
@@ -714,10 +733,17 @@ public class ControladorCamera : MonoBehaviour
         InverterVertical   = minhaCamera.videoVerticallyMirrored;
         InverterHorizontal = false;
 
-        // No celular o giro relatado costuma vir zerado; 90 graus e o valor
-        // que corresponde ao sensor da maioria dos aparelhos em retrato
-        if (Application.isMobilePlatform && GiroDaCamera == 0)
-            GiroDaCamera = 90;
+        // No celular o valor informado pelo sensor nao corresponde ao que
+        // aparece na tela: 90 graus e o giro que funciona na pratica
+        if (Application.isMobilePlatform)
+        {
+            GiroDaCamera     = 90;
+            InverterVertical = false;
+
+            // A tela mostra uma fatia menor do sensor, sobrando mais folga
+            // para a mao continuar visivel quando vai para os cantos
+            zoomDaTela = 1.35f;
+        }
 
         // Preferencias salvas de uma sessao anterior tem prioridade
         if (PlayerPrefs.HasKey("camGiro"))
