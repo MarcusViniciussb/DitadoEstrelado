@@ -59,9 +59,6 @@ public class MenuPrincipal : MonoBehaviour
     TextMeshProUGUI rotuloTela;
     TextMeshProUGUI rotuloPressao;
     TextMeshProUGUI rotuloEspelho;
-    TextMeshProUGUI rotuloGiro, rotuloInvV, rotuloInvH, rotuloDiag;
-    TextMeshProUGUI textoDiagnostico;
-    bool diagnosticoLigado;
     TextMeshProUGUI tmpTitulo1;    // texto do título (muda entre os modos)
     UIControle uiControle;         // para abrir o espaço do objeto no cartão
 
@@ -107,21 +104,6 @@ public class MenuPrincipal : MonoBehaviour
         else
         {
             timerFimDeJogo = 0f;
-        }
-
-        if (diagnosticoLigado && textoDiagnostico != null && controlador != null)
-        {
-            var pontos = controlador.PontosDaMaoAtuais;
-            textoDiagnostico.text =
-                "fonte: "     + controlador.FonteDeRastreamento + "\n" +
-                "camera: "    + controlador.ResolucaoDaCamera +
-                "   giro " + controlador.GiroDaCamera +
-                (controlador.InverterVertical ? " V" : "") +
-                (controlador.InverterHorizontal ? " H" : "") + "\n" +
-                "confianca: " + controlador.ConfiancaAtual.ToString("F2") +
-                "   mao: " + (controlador.MaoDetectada ? "SIM" : "nao") + "\n" +
-                "pontos: "    + (pontos == null ? "nenhum" : pontos.Length.ToString()) + "\n" +
-                "quadros/s: " + Mathf.RoundToInt(1f / Mathf.Max(0.0001f, Time.smoothDeltaTime));
         }
 
         // No treinamento, atualiza o contador de amostras a cada meio segundo
@@ -323,16 +305,6 @@ public class MenuPrincipal : MonoBehaviour
         textoContagem.fontSizeMax = 36f;
 
         dicaTreinamento = painel.gameObject;
-
-        // Diagnostico: mostra o que a camera e a IA estao entregando.
-        // Serve para descobrir, no proprio aparelho, se a mao nao aparece por
-        // causa da imagem ou por causa do reconhecimento.
-        textoDiagnostico = UIFabrica.CriarTexto(transform, "Diagnostico", "",
-            26f, new Color(0.6f, 1f, 0.6f, 0.95f), new Vector2(20, 260),
-            new Vector2(560, 220), false);
-        UIFabrica.Ancorar(textoDiagnostico, new Vector2(0f, 0f), new Vector2(0f, 0f));
-        textoDiagnostico.alignment = TextAlignmentOptions.BottomLeft;
-        textoDiagnostico.gameObject.SetActive(false);
     }
 
     // ── Painel de senha (área do professor) ──────────────────────────────────
@@ -434,29 +406,20 @@ public class MenuPrincipal : MonoBehaviour
     void ConstruirPainelOpcoes()
     {
         var fundo = UIFabrica.CriarImagem(telaMenu.transform, "PainelOpcoes",
-            new Color(0.07f, 0.09f, 0.25f, 0.97f), Vector2.zero, new Vector2(760, 1000),
+            new Color(0.07f, 0.09f, 0.25f, 0.97f), Vector2.zero, new Vector2(700, 640),
             UIFabrica.Arredondado(), true);
         painelOpcoes = fundo.gameObject;
 
         UIFabrica.CriarTexto(fundo.transform, "Titulo", "OPÇÕES",
-            50f, COR_TITULO, new Vector2(0, 425), new Vector2(700, 70));
+            52f, COR_TITULO, new Vector2(0, 250), new Vector2(640, 80));
 
-        float y = 330f, passo = 96f;
-        rotuloTela    = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, y), AlternarTela);
-        rotuloPressao = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, y -= passo), AlternarPressao);
-        rotuloEspelho = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, y -= passo), AlternarEspelho);
-
-        UIFabrica.CriarTexto(fundo.transform, "SubCamera", "ajuste da imagem da câmera",
-            26f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, y -= 62f), new Vector2(700, 36), false);
-
-        rotuloGiro   = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, y -= 58f), GirarCamera);
-        rotuloInvV   = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, y -= passo), AlternarPontaCabeca);
-        rotuloInvH   = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, y -= passo), AlternarLados);
-        rotuloDiag   = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, y -= passo), AlternarDiagnostico);
+        rotuloTela    = CriarLinhaDeOpcao(fundo.transform, new Vector2(0,  140), AlternarTela);
+        rotuloPressao = CriarLinhaDeOpcao(fundo.transform, new Vector2(0,   10), AlternarPressao);
+        rotuloEspelho = CriarLinhaDeOpcao(fundo.transform, new Vector2(0, -120), AlternarEspelho);
 
         UIFabrica.CriarBotao(fundo.transform, "Fechar", "FECHAR",
-            new Color(0.4f, 0.4f, 0.5f, 1f), new Vector2(0, -430), new Vector2(300, 86),
-            34f, controlador, FecharOpcoes);
+            new Color(0.4f, 0.4f, 0.5f, 1f), new Vector2(0, -250), new Vector2(300, 90),
+            36f, controlador, FecharOpcoes);
 
         painelOpcoes.SetActive(false);
     }
@@ -493,58 +456,6 @@ public class MenuPrincipal : MonoBehaviour
         if (rotuloEspelho != null && controlador != null)
             rotuloEspelho.text = controlador.espelharImagem
                                  ? "ESPELHAR CÂMERA:  SIM" : "ESPELHAR CÂMERA:  NÃO";
-        if (rotuloGiro != null && controlador != null)
-            rotuloGiro.text = "GIRO:  " + controlador.GiroDaCamera + " graus";
-        if (rotuloInvV != null && controlador != null)
-            rotuloInvV.text = controlador.InverterVertical
-                              ? "DE PONTA-CABEÇA:  SIM" : "DE PONTA-CABEÇA:  NÃO";
-        if (rotuloInvH != null && controlador != null)
-            rotuloInvH.text = controlador.InverterHorizontal
-                              ? "INVERTER LADOS:  SIM" : "INVERTER LADOS:  NÃO";
-        if (rotuloDiag != null)
-            rotuloDiag.text = diagnosticoLigado
-                              ? "DIAGNÓSTICO:  SIM" : "DIAGNÓSTICO:  NÃO";
-    }
-
-    // ── Ajuste da imagem da camera (util no celular) ────────────────────────
-
-    void GirarCamera()
-    {
-        GerenciadorDeAudio.TocarClique();
-        AplicarAjusteDaCamera(controlador.GiroDaCamera + 90,
-                              controlador.InverterVertical, controlador.InverterHorizontal);
-    }
-
-    void AlternarPontaCabeca()
-    {
-        GerenciadorDeAudio.TocarClique();
-        AplicarAjusteDaCamera(controlador.GiroDaCamera,
-                              !controlador.InverterVertical, controlador.InverterHorizontal);
-    }
-
-    void AlternarLados()
-    {
-        GerenciadorDeAudio.TocarClique();
-        AplicarAjusteDaCamera(controlador.GiroDaCamera,
-                              controlador.InverterVertical, !controlador.InverterHorizontal);
-    }
-
-    void AplicarAjusteDaCamera(int giro, bool vertical, bool horizontal)
-    {
-        controlador.DefinirAjusteDaCamera(giro, vertical, horizontal);
-        PlayerPrefs.SetInt("camGiro", controlador.GiroDaCamera);
-        PlayerPrefs.SetInt("camInvV", controlador.InverterVertical ? 1 : 0);
-        PlayerPrefs.SetInt("camInvH", controlador.InverterHorizontal ? 1 : 0);
-        PlayerPrefs.Save();
-        AtualizarRotulosOpcoes();
-    }
-
-    void AlternarDiagnostico()
-    {
-        GerenciadorDeAudio.TocarClique();
-        diagnosticoLigado = !diagnosticoLigado;
-        if (textoDiagnostico != null) textoDiagnostico.gameObject.SetActive(diagnosticoLigado);
-        AtualizarRotulosOpcoes();
     }
 
     void AlternarTela()

@@ -15,6 +15,9 @@ public class ControladorCamera : MonoBehaviour
     [Header("Referências de Cena")]
     public RawImage fundoDoEcra;         // RawImage que exibe o feed da câmera
     public ResourceSet ficheirosDaIA;    // ScriptableObject do plugin HandLandmark
+    // Detector de palma: primeiro estagio do MediaPipe, usado no celular para
+    // localizar a mao e a sua inclinacao antes de chamar o modelo de pontos
+    public MediaPipe.BlazePalm.ResourceSet ficheirosDaPalma;
     public Transform bolinhaDoDedo;      // Objeto 3D que segue a ponta do indicador
     public ReconhecedorLibras reconhecedor;
 
@@ -92,6 +95,10 @@ public class ControladorCamera : MonoBehaviour
     private float larguraDoQuadro = 0f, alturaDoQuadro = 0f;
     private float anguloDaMao = 0f;
     private bool  alinharMao  = false;
+#if UNITY_ANDROID && !UNITY_EDITOR
+    private MediaPipe.BlazePalm.PalmDetector detectorDePalma;
+    private float tempoDaProximaBuscaDePalma = 0f;
+#endif
 
     public int  GiroDaCamera       { get; private set; }
     public bool InverterVertical   { get; private set; }
@@ -473,6 +480,39 @@ public class ControladorCamera : MonoBehaviour
                            0.5f + g.y / minhaCamera.height);
     }
 
+    // Primeiro estagio do reconhecimento: procura a mao no quadro inteiro e
+    // define onde recortar e quanto girar. E o que o MediaPipe do computador
+    // faz e faltava aqui; sem isso o modelo de pontos so acerta quando a mao
+    // ja esta bem posicionada.
+    void ProcurarPalma()
+    {
+        if (detectorDePalma == null || texturaExibicao == null) return;
+
+        detectorDePalma.ProcessImage(texturaExibicao, 0.6f);
+        var deteccoes = detectorDePalma.Detections;
+        if (deteccoes.Length == 0) return;
+
+        // Fica com a deteccao mais confiavel
+        int melhor = 0;
+        for (int i = 1; i < deteccoes.Length; i++)
+            if (deteccoes[i].score > deteccoes[melhor].score) melhor = i;
+        var d = deteccoes[melhor];
+
+        // Onde recortar: a caixa da palma, com folga para os dedos caberem
+        centroCaixa = d.center;
+        float ladoEmPixels = Mathf.Max(d.extent.x * larguraDoQuadro,
+                                       d.extent.y * alturaDoQuadro);
+        ladoCaixaPx = Mathf.Clamp(ladoEmPixels * 2.6f, 160f,
+                                  Mathf.Min(larguraDoQuadro, alturaDoQuadro));
+
+        // Quanto girar: a direcao do pulso ate a base do dedo medio diz a
+        // inclinacao da mao, e o modelo espera receber a mao em pe
+        Vector2 eixo = new Vector2((d.middle.x - d.wrist.x) * larguraDoQuadro,
+                                   (d.middle.y - d.wrist.y) * alturaDoQuadro);
+        if (eixo.sqrMagnitude > 0.0001f)
+            anguloDaMao = 90f - Mathf.Atan2(eixo.y, eixo.x) * Mathf.Rad2Deg;
+    }
+
     void CopiarComGiro(RenderTexture destino, Vector2 centro, Vector2 tamanhoEmPixels,
                        float grausExtra = 0f)
     {
@@ -500,6 +540,21 @@ public class ControladorCamera : MonoBehaviour
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         PrepararCorrecaoDeGiro();
+
+        // Primeiro estagio: o detector de palma encontra a mao no quadro
+        // inteiro e informa onde ela esta e para que lado esta virada
+        if (ficheirosDaPalma != null)
+        {
+            try
+            {
+                detectorDePalma = new MediaPipe.BlazePalm.PalmDetector(ficheirosDaPalma);
+                Debug.Log("Detector de palma pronto (pipeline de dois estagios).");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("Detector de palma indisponivel: " + e.Message);
+            }
+        }
 #endif
 
         try
@@ -814,6 +869,15 @@ public class ControladorCamera : MonoBehaviour
         if (materialDeGiro != null && texturaExibicao != null)
             CopiarComGiro(texturaExibicao, ParaFonte(new Vector2(0.5f, 0.5f)),
                           new Vector2(larguraDoQuadro, alturaDoQuadro));
+
+        // Sem mao rastreada, procura a palma a cada quadro; com a mao em maos,
+        // uma conferida por segundo basta e o custo fica baixo
+        if (detectorDePalma != null &&
+            (!MaoDetectada || Time.time >= tempoDaProximaBuscaDePalma))
+        {
+            ProcurarPalma();
+            tempoDaProximaBuscaDePalma = Time.time + 1f;
+        }
         float w = larguraDoQuadro > 0f ? larguraDoQuadro : minhaCamera.width;
         float h = alturaDoQuadro  > 0f ? alturaDoQuadro  : minhaCamera.height;
 #else
@@ -1002,6 +1066,9 @@ public class ControladorCamera : MonoBehaviour
     {
         EncerrarProcessoDoRastreador(); // fecha o Python junto com o jogo
         detetive?.Dispose();
+#if UNITY_ANDROID && !UNITY_EDITOR
+        detectorDePalma?.Dispose();
+#endif
         if (texturaRecorte  != null) texturaRecorte.Release();
         if (texturaExibicao != null) texturaExibicao.Release();
         if (minhaCamera != null && minhaCamera.isPlaying)
