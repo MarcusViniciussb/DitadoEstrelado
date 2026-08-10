@@ -395,12 +395,19 @@ public class ControladorCamera : MonoBehaviour
         var canvas = FindObjectOfType<Canvas>();
         if (canvas == null) return;
 
-        painelDeMedicao = UIFabrica.CriarTexto(canvas.transform, "Medicao", "",
-            26f, new Color(0.6f, 1f, 0.6f, 0.95f), new Vector2(18, 300),
-            new Vector2(620, 260), false);
-        UIFabrica.Ancorar(painelDeMedicao, new Vector2(0f, 0f), new Vector2(0f, 0f));
-        painelDeMedicao.alignment = TMPro.TextAlignmentOptions.BottomLeft;
-        painelDeMedicao.transform.SetAsLastSibling();
+        // Fundo escuro atras do texto: o painel precisa ser legivel mesmo
+        // numa foto ou video comprimido da tela
+        var fundo = UIFabrica.CriarImagem(canvas.transform, "FundoMedicao",
+            new Color(0f, 0f, 0f, 0.75f), new Vector2(0, -250), new Vector2(1000, 300),
+            UIFabrica.Arredondado(), true);
+        UIFabrica.Ancorar(fundo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+        fundo.raycastTarget = false;
+
+        painelDeMedicao = UIFabrica.CriarTexto(fundo.transform, "Medicao", "",
+            42f, new Color(0.55f, 1f, 0.55f, 1f), Vector2.zero,
+            new Vector2(960, 280), false);
+        painelDeMedicao.alignment = TMPro.TextAlignmentOptions.Center;
+        fundo.transform.SetAsLastSibling();
     }
 
     void AtualizarPainelDeMedicao()
@@ -443,7 +450,7 @@ public class ControladorCamera : MonoBehaviour
 
         Application.targetFrameRate = 60;
         CriarPainelDeMedicao();
-        alinharMao = true;   // o modelo do celular espera a mao em pe
+        alinharMao = false;  // recorte alinhado aos eixos, sem giro extra
         zoomDaTela = 1.5f;   // a tela mostra menos, sobrando margem nas bordas
         IniciarCameraInterna();
     }
