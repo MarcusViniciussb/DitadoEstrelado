@@ -385,6 +385,48 @@ public class ControladorCamera : MonoBehaviour
     }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
+    // ── Medicao no aparelho ─────────────────────────────────────────────────
+    private TMPro.TextMeshProUGUI painelDeMedicao;
+    private int  palmasEncontradas = 0;
+    private float tempoDoProximoTexto = 0f;
+
+    void CriarPainelDeMedicao()
+    {
+        var canvas = FindObjectOfType<Canvas>();
+        if (canvas == null) return;
+
+        painelDeMedicao = UIFabrica.CriarTexto(canvas.transform, "Medicao", "",
+            26f, new Color(0.6f, 1f, 0.6f, 0.95f), new Vector2(18, 300),
+            new Vector2(620, 260), false);
+        UIFabrica.Ancorar(painelDeMedicao, new Vector2(0f, 0f), new Vector2(0f, 0f));
+        painelDeMedicao.alignment = TMPro.TextAlignmentOptions.BottomLeft;
+        painelDeMedicao.transform.SetAsLastSibling();
+    }
+
+    void AtualizarPainelDeMedicao()
+    {
+        if (painelDeMedicao == null || Time.unscaledTime < tempoDoProximoTexto) return;
+        tempoDoProximoTexto = Time.unscaledTime + 0.2f;
+
+        string letraEsperada = (gerenciador != null) ? gerenciador.LetraEsperada : "-";
+        painelDeMedicao.text =
+            "confianca " + ConfiancaAtual.ToString("F2") +
+            "   mao " + (MaoDetectada ? "SIM" : "nao") + "
+" +
+            "palmas " + palmasEncontradas +
+            "   recorte " + Mathf.RoundToInt(ladoCaixaPx) +
+            "px   giro " + Mathf.RoundToInt(anguloDaMao) + "
+" +
+            "esperada " + (string.IsNullOrEmpty(letraEsperada) ? "-" : letraEsperada) +
+            "   vista " + (reconhecedor != null ? reconhecedor.UltimaLetra : "-") + "
+" +
+            "distancia " + (reconhecedor != null && reconhecedor.UltimaDistancia < 9999f
+                            ? reconhecedor.UltimaDistancia.ToString("F2") : "-") +
+            "   limite " + (reconhecedor != null ? reconhecedor.toleranciaDeErro.ToString("F1") : "-") + "
+" +
+            "quadros/s " + Mathf.RoundToInt(1f / Mathf.Max(0.0001f, Time.smoothDeltaTime));
+    }
+
     // ── Camera do celular ───────────────────────────────────────────────────
 
     IEnumerator PrepararCameraDoCelular()
@@ -403,6 +445,7 @@ public class ControladorCamera : MonoBehaviour
         }
 
         Application.targetFrameRate = 60;
+        CriarPainelDeMedicao();
         alinharMao = true;   // o modelo do celular espera a mao em pe
         zoomDaTela = 1.5f;   // a tela mostra menos, sobrando margem nas bordas
         IniciarCameraInterna();
@@ -502,6 +545,7 @@ public class ControladorCamera : MonoBehaviour
 
         detectorDePalma.ProcessImage(texturaDaPalma, 0.5f);
         var deteccoes = detectorDePalma.Detections;
+        palmasEncontradas = deteccoes.Length;
         if (deteccoes.Length == 0) return;
 
         // Fica com a deteccao mais confiavel
@@ -655,6 +699,9 @@ public class ControladorCamera : MonoBehaviour
 
         // Mantém a imagem sem distorção (recorte central estilo "cover")
         AjustarRecorteDaCamera();
+#if UNITY_ANDROID && !UNITY_EDITOR
+        AtualizarPainelDeMedicao();
+#endif
 
         if (usandoExterno)
         {

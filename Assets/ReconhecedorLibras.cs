@@ -34,8 +34,11 @@ public class ReconhecedorLibras : MonoBehaviour
     Vector3 DaCamera(Vector3 p)
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
+        // A profundidade tem as mesmas unidades do eixo X, entao recebe o
+        // mesmo fator. Sem isso ela ficaria com peso exagerado e passaria a
+        // atrapalhar a comparacao em vez de ajudar.
         float fator = aspectoDaCamera / ASPECTO_DO_BANCO;
-        return new Vector3(p.x * fator, p.y, temProfundidade ? p.z : 0f);
+        return new Vector3(p.x * fator, p.y, temProfundidade ? p.z * fator : 0f);
 #else
         return p;
 #endif
@@ -128,6 +131,11 @@ public class ReconhecedorLibras : MonoBehaviour
     // Distância da última classificação - quanto MENOR, mais parecido o sinal
     // está com o gravado (o ControladorCamera usa para aceitar mais rápido)
     public float UltimaDistancia { get; private set; } = float.MaxValue;
+
+    // Letra mais parecida da ultima comparacao, mesmo quando recusada.
+    // Serve para descobrir, no proprio aparelho, se o problema esta em
+    // reconhecer a letra errada ou em recusar a letra certa.
+    public string UltimaLetra { get; private set; } = "-";
 
     // Resumo tipo "A: 7   B: 5   C: 4" - mostrado na tela de treinamento
     public string ResumoDoBanco()
@@ -355,6 +363,7 @@ public class ReconhecedorLibras : MonoBehaviour
 
         float menorDistancia = melhorDistDaLetra[vencedora];
         UltimaDistancia = menorDistancia;
+        UltimaLetra     = vencedora;
 
         // Debug: mostra a cada 0.5s a eleição e a distância.
         // Use para calibrar a tolerância: faça o sinal correto, veja a distância
