@@ -50,6 +50,11 @@ public class MenuPrincipal : MonoBehaviour
     float timerFimDeJogo;
     float timerContagem;
 
+    // Distancia da camera em que o objeto 3D e exibido
+    const float DISTANCIA_DO_OBJETO = 15f;
+    float larguraDoSlot = 300f;   // espaco reservado na esquerda do cartao
+    int   larguraDaTelaAnterior, alturaDaTelaAnterior;
+
     // Orientacao da tela: false = celular (retrato), true = PC/tablet (paisagem)
     bool telaHorizontal;
     CanvasScaler escalador;
@@ -104,6 +109,14 @@ public class MenuPrincipal : MonoBehaviour
         else
         {
             timerFimDeJogo = 0f;
+        }
+
+        // Se a janela mudar de tamanho, o objeto 3D reencontra o cartão
+        if (Screen.width != larguraDaTelaAnterior || Screen.height != alturaDaTelaAnterior)
+        {
+            larguraDaTelaAnterior = Screen.width;
+            alturaDaTelaAnterior  = Screen.height;
+            PosicionarObjeto3D();
         }
 
         // No treinamento, atualiza o contador de amostras a cada meio segundo
@@ -585,13 +598,45 @@ public class MenuPrincipal : MonoBehaviour
                 new Vector2(-250, 240), new Vector2(470, 115),
                 new Vector2(-770, 210), new Vector2(390, 115));
 
-        // Objeto 3D posicionado sobre o slot esquerdo do cartão
-        if (gerenciador != null && gerenciador.pontoDeExibicao != null)
-        {
-            gerenciador.pontoDeExibicao.position =
-                h ? new Vector3(-7.2f, -4.3f, 5f) : new Vector3(-3.05f, -2.9f, 5f);
-            gerenciador.tamanhoDoObjeto = h ? 3.1f : 2.0f;
-        }
+        larguraDoSlot = h ? 300f : 260f;
+        PosicionarObjeto3D();
+    }
+
+    // O objeto 3D vive no mundo e o cartão vive na interface. Se a posição do
+    // objeto for fixa, os dois só coincidem numa proporção de tela específica
+    // e o objeto "escapa" da caixa em qualquer outra. Aqui a posição é
+    // calculada a partir do cartão de verdade, então eles andam sempre juntos.
+    void PosicionarObjeto3D()
+    {
+        if (gerenciador == null || gerenciador.pontoDeExibicao == null) return;
+        if (painelPalavra == null) return;
+
+        var camera = Camera.main;
+        if (camera == null) return;
+
+        var rt = (RectTransform)painelPalavra.transform;
+        var cantos = new Vector3[4];
+        rt.GetWorldCorners(cantos); // 0=baixo-esq 1=cima-esq 2=cima-dir 3=baixo-dir
+
+        // Centro do espaço reservado na esquerda do cartão
+        float fatia = Mathf.Clamp01(larguraDoSlot / Mathf.Max(1f, rt.rect.width));
+        Vector3 meioEsquerdo = Vector3.Lerp(cantos[0], cantos[1], 0.5f);
+        Vector3 meioDireito  = Vector3.Lerp(cantos[3], cantos[2], 0.5f);
+        Vector3 alvo = Vector3.Lerp(meioEsquerdo, meioDireito, fatia * 0.5f);
+
+        // Leva esse ponto para a distância em que o objeto é exibido
+        Vector3 naTela = camera.WorldToScreenPoint(alvo);
+        gerenciador.pontoDeExibicao.position =
+            camera.ScreenToWorldPoint(new Vector3(naTela.x, naTela.y, DISTANCIA_DO_OBJETO));
+
+        // Tamanho proporcional à altura do cartão, para caber no espaço
+        Vector3 topo  = camera.ScreenToWorldPoint(new Vector3(naTela.x,
+                        camera.WorldToScreenPoint(cantos[1]).y, DISTANCIA_DO_OBJETO));
+        Vector3 baixo = camera.ScreenToWorldPoint(new Vector3(naTela.x,
+                        camera.WorldToScreenPoint(cantos[0]).y, DISTANCIA_DO_OBJETO));
+        float alturaNoMundo = Vector3.Distance(topo, baixo);
+        if (alturaNoMundo > 0.01f)
+            gerenciador.tamanhoDoObjeto = alturaNoMundo * 0.78f;
     }
 
     // ── Ações dos botões ─────────────────────────────────────────────────────

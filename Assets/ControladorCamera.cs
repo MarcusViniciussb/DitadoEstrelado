@@ -97,7 +97,9 @@ public class ControladorCamera : MonoBehaviour
     private bool  alinharMao  = false;
 #if UNITY_ANDROID && !UNITY_EDITOR
     private MediaPipe.BlazePalm.PalmDetector detectorDePalma;
+    private RenderTexture texturaDaPalma;
     private float tempoDaProximaBuscaDePalma = 0f;
+    private float ladoDoQuadradoDaPalma = 0f;
 #endif
 
     public int  GiroDaCamera       { get; private set; }
@@ -402,7 +404,7 @@ public class ControladorCamera : MonoBehaviour
 
         Application.targetFrameRate = 60;
         alinharMao = true;   // o modelo do celular espera a mao em pe
-        zoomDaTela = 1.35f;  // mais folga para a mao nos cantos da tela
+        zoomDaTela = 1.5f;   // a tela mostra menos, sobrando margem nas bordas
         IniciarCameraInterna();
     }
 
@@ -486,9 +488,19 @@ public class ControladorCamera : MonoBehaviour
     // ja esta bem posicionada.
     void ProcurarPalma()
     {
-        if (detectorDePalma == null || texturaExibicao == null) return;
+        if (detectorDePalma == null || materialDeGiro == null) return;
 
-        detectorDePalma.ProcessImage(texturaExibicao, 0.6f);
+        // O detector espera uma imagem quadrada. Entregar o quadro em pe
+        // esticaria a mao e derrubaria as deteccoes, entao montamos um
+        // quadrado com o quadro inteiro dentro.
+        if (texturaDaPalma == null)
+            texturaDaPalma = new RenderTexture(256, 256, 0);
+
+        ladoDoQuadradoDaPalma = Mathf.Max(larguraDoQuadro, alturaDoQuadro);
+        CopiarComGiro(texturaDaPalma, ParaFonte(new Vector2(0.5f, 0.5f)),
+                      new Vector2(ladoDoQuadradoDaPalma, ladoDoQuadradoDaPalma));
+
+        detectorDePalma.ProcessImage(texturaDaPalma, 0.5f);
         var deteccoes = detectorDePalma.Detections;
         if (deteccoes.Length == 0) return;
 
@@ -498,17 +510,22 @@ public class ControladorCamera : MonoBehaviour
             if (deteccoes[i].score > deteccoes[melhor].score) melhor = i;
         var d = deteccoes[melhor];
 
+        // As coordenadas vem do quadrado; aqui voltam para o quadro real
+        float L = ladoDoQuadradoDaPalma;
+        Vector2 centroNoQuadro = new Vector2(
+            0.5f + (d.center.x - 0.5f) * L / larguraDoQuadro,
+            0.5f + (d.center.y - 0.5f) * L / alturaDoQuadro);
+
         // Onde recortar: a caixa da palma, com folga para os dedos caberem
-        centroCaixa = d.center;
-        float ladoEmPixels = Mathf.Max(d.extent.x * larguraDoQuadro,
-                                       d.extent.y * alturaDoQuadro);
+        centroCaixa = centroNoQuadro;
+        float ladoEmPixels = Mathf.Max(d.extent.x * L, d.extent.y * L);
         ladoCaixaPx = Mathf.Clamp(ladoEmPixels * 2.6f, 160f,
                                   Mathf.Min(larguraDoQuadro, alturaDoQuadro));
 
         // Quanto girar: a direcao do pulso ate a base do dedo medio diz a
         // inclinacao da mao, e o modelo espera receber a mao em pe
-        Vector2 eixo = new Vector2((d.middle.x - d.wrist.x) * larguraDoQuadro,
-                                   (d.middle.y - d.wrist.y) * alturaDoQuadro);
+        Vector2 eixo = new Vector2((d.middle.x - d.wrist.x) * L,
+                                   (d.middle.y - d.wrist.y) * L);
         if (eixo.sqrMagnitude > 0.0001f)
             anguloDaMao = 90f - Mathf.Atan2(eixo.y, eixo.x) * Mathf.Rad2Deg;
     }
@@ -645,7 +662,13 @@ public class ControladorCamera : MonoBehaviour
         // mas só solta quando cair BEM (0.45). Isso elimina o pisca-pisca do
         // esqueleto quando a confiança fica oscilando perto do limite.
         float confianca = usandoExterno ? rastreadorExterno.Score : detetive.Score;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // Mais tolerancia para MANTER a mao ja encontrada: sinais de punho
+        // fechado abaixam a confianca e o rastreio se perdia neles
+        MaoDetectada = MaoDetectada ? (confianca >= 0.25f) : (confianca >= 0.5f);
+#else
         MaoDetectada = MaoDetectada ? (confianca >= 0.45f) : (confianca >= 0.6f);
+#endif
 
         if (!MaoDetectada)
         {
@@ -659,7 +682,14 @@ public class ControladorCamera : MonoBehaviour
             if (!usandoExterno)
             {
                 framesSemMao++;
-                if (framesSemMao > 15)
+#if UNITY_ANDROID && !UNITY_EDITOR
+                // Com o detector de palma trabalhando, vale insistir na ultima
+                // posicao conhecida antes de varrer o quadro inteiro de novo
+                int limiteSemMao = (detectorDePalma != null) ? 90 : 15;
+#else
+                const int limiteSemMao = 15;
+#endif
+                if (framesSemMao > limiteSemMao)
                 {
                     centroCaixa = new Vector2(0.5f, 0.5f);
                     ladoCaixaPx = 0f;
@@ -1068,6 +1098,7 @@ public class ControladorCamera : MonoBehaviour
         detetive?.Dispose();
 #if UNITY_ANDROID && !UNITY_EDITOR
         detectorDePalma?.Dispose();
+        if (texturaDaPalma != null) texturaDaPalma.Release();
 #endif
         if (texturaRecorte  != null) texturaRecorte.Release();
         if (texturaExibicao != null) texturaExibicao.Release();
