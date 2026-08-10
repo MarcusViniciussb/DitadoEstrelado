@@ -560,8 +560,19 @@ public class MenuPrincipal : MonoBehaviour
                             new Vector2(490,  45), new Vector2(420, 120));
         PosTam(rtSair,      new Vector2(0, -325), new Vector2(560, 120),
                             new Vector2(0,  -90), new Vector2(320, 100));
-        Pos(rtDicaMenu,  new Vector2(0, -430), new Vector2(0, -170));
-        Pos(rtCreditos,  new Vector2(0, -690), new Vector2(0, -335));
+        // Presos a base da tela: assim continuam visiveis em qualquer
+        // proporcao de janela, inclusive quando ela nao corresponde a
+        // orientacao escolhida
+        if (rtDicaMenu != null)
+        {
+            UIFabrica.Ancorar(rtDicaMenu, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            rtDicaMenu.anchoredPosition = h ? new Vector2(0, 330) : new Vector2(0, 400);
+        }
+        if (rtCreditos != null)
+        {
+            UIFabrica.Ancorar(rtCreditos, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            rtCreditos.anchoredPosition = new Vector2(0, 165);
+        }
 
         // Luzes acompanham o título; estrelas se espalham na largura nova
         for (int i = 0; i < brilhosTitulo.Count; i++)

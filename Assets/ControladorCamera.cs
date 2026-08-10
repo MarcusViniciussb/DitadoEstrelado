@@ -726,7 +726,7 @@ public class ControladorCamera : MonoBehaviour
             reconhecedor.aspectoDaCamera = (alturaDoQuadro > 0f)
                 ? larguraDoQuadro / alturaDoQuadro
                 : (float)minhaCamera.width / minhaCamera.height;
-            reconhecedor.temProfundidade = false; // o detector interno nao entrega z
+            reconhecedor.temProfundidade = true;  // a profundidade agora e lida do modelo
         }
 #endif
 
@@ -1035,6 +1035,11 @@ public class ControladorCamera : MonoBehaviour
         {
             Vector2 v2 = detetive.GetKeyPoint(valores[i]);
 #if UNITY_ANDROID && !UNITY_EDITOR
+            // Profundidade: o modelo entrega quatro componentes por ponto e o
+            // atalho de leitura devolvia apenas duas, descartando o eixo Z.
+            // Lido aqui, ele fica na mesma escala do recorte.
+            float z = detetive.VertexArray[i].z * escalaBlit.x;
+
             // O recorte pode ter girado para alinhar a mao: desfaz aqui
             float cx = v2.x - 0.5f, cy = v2.y - 0.5f;
             if (alinharMao && Mathf.Abs(anguloDaMao) > 0.01f)
@@ -1046,7 +1051,7 @@ public class ControladorCamera : MonoBehaviour
                 cx = rx; cy = ry;
             }
             pontos[i] = new Vector3(offsetBlit.x + escalaBlit.x * (0.5f + cx),
-                                    offsetBlit.y + escalaBlit.y * (0.5f + cy), 0f);
+                                    offsetBlit.y + escalaBlit.y * (0.5f + cy), z);
 #else
             pontos[i] = new Vector3(offsetBlit.x + v2.x * escalaBlit.x,
                                     offsetBlit.y + v2.y * escalaBlit.y, 0f);
