@@ -24,6 +24,20 @@ As duas plataformas usam **a mesma versão do MediaPipe e o mesmo modelo**
 biblioteca roda em modo `LIVE_STREAM`: o envio do quadro não bloqueia o jogo e
 o resultado é buscado quando fica pronto.
 
+### Distribuição
+
+| Plataforma | Formato | Requisitos |
+|---|---|---|
+| Android | APK único (~77 MB), ARM64, API mínima 24 | nada além do próprio aplicativo |
+| Windows | executável 64 bits (~150 MB descompactado) | Python com MediaPipe para o rastreamento principal |
+
+No Windows a pasta `RastreadorPython` viaja ao lado do executável, que é onde o
+jogo a procura. Sem Python configurado o jogo ainda abre: um rastreador reserva
+embarcado assume, com menor precisão.
+
+Vale registrar a inversão: a versão móvel tem hoje o caminho de instalação mais
+simples das duas, por não depender de nada externo.
+
 A saída são 21 pontos por mão, com coordenadas normalizadas no quadro e uma
 componente de profundidade relativa.
 
@@ -145,21 +159,47 @@ Média dos sete cenários:
 |---|---|---|
 | Anterior (kNN k=3, limiar absoluto, sem correção de giro) | 46,1% | 4,9% |
 | Com critério relativo e giro corrigido | 94,0% | 2,1% |
-| Acrescentando as distâncias de contato | **94,3%** | **1,4%** |
+| Acrescentando as distâncias de contato (atual) | **94,3%** | **1,4%** |
 
-### Por cenário (configuração final)
+Cada linha isola uma mudança, o que caracteriza um estudo de ablação: mostra que
+a robustez vem do **critério de aceitação e da correção de giro**, não do
+classificador em si.
 
-| Cenário | Anterior | Final |
-|---|---|---|
-| Mão em pé | 96,3% | 95,7% |
-| Inclinada 10° | 85,0% | 95,9% |
-| Inclinada 15° | 60,6% | 95,9% |
-| Inclinada 20° | 21,2% | 95,5% |
-| Com ruído de leitura | 38,8% | 88,9% |
+### Por cenário (configuração final, com os contatos)
+
+"Erro" é aceitar letra incorreta; o que falta para 100% é a recusa, quando o
+sistema não aceita nenhuma letra.
+
+| Cenário | Anterior: acerto | Anterior: erro | Final: acerto | Final: erro |
+|---|---|---|---|---|
+| Mão em pé | 96,3% | 2,1% | 95,9% | 1,4% |
+| Inclinada 10° | 85,0% | 8,7% | 95,9% | 1,4% |
+| Inclinada 15° | 60,6% | 10,3% | 95,9% | 1,6% |
+| Inclinada 20° | 21,2% | 6,2% | 95,3% | 1,4% |
+| Com ruído de leitura | 38,8% | 1,9% | 90,9% | 2,1% |
+| Inclinada 12° + ruído | 21,0% | 4,5% | 92,6% | 1,4% |
+| Inclinada 25° + ruído | 0,0% | 0,4% | 93,4% | 1,0% |
+| **Média** | **46,1%** | **4,9%** | **94,3%** | **1,4%** |
 
 Com a mão perfeitamente em pé as duas praticamente empatam. Todo o ganho está
 em deixar de desabar quando a mão inclina ou a leitura piora — que é a situação
 comum de uso.
+
+Detalhe que explica a raiz do problema antigo: no cenário com ruído, a
+configuração anterior **errava pouco (1,9%) e recusava 59,2%**. Ela escolhia a
+letra certa e a rejeitava, porque o limiar era absoluto e todas as distâncias
+haviam subido juntas.
+
+### Por letra (cenário limpo, configuração final)
+
+Acerto global 95,9%, erro 1,4%, recusa 2,7%.
+
+| | | | | | | | | | |
+|---|---|---|---|---|---|---|---|---|---|
+| A 87% | B 100% | C 100% | D 100% | E 100% | F 62% | G 100% | I 97% | L 100% | M 100% |
+| N 100% | O 100% | P 100% | Q 75% | R 87% | S 97% | T 100% | U 82% | V 97% | Y 86% |
+
+As três piores — F, Q e Y — são exatamente as três com menos amostras.
 
 ### Letras com movimento
 
@@ -226,5 +266,8 @@ sobre-interpretados:
 3. **Ícone adaptativo do Android**, em duas camadas, para acompanhar o formato
    de cada aparelho. Atualmente é usado o ícone clássico, que o sistema recorta
    sozinho.
-4. **Coleta com mais participantes**, que é o que permitiria afirmar algo sobre
+4. **Medir a taxa de quadros por segundo da versão Android** com o MediaPipe
+   nativo. A medição existente, de 22 quadros por segundo, refere-se à
+   implementação anterior e não vale para a atual.
+5. **Coleta com mais participantes**, que é o que permitiria afirmar algo sobre
    generalização.
