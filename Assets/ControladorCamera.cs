@@ -121,6 +121,13 @@ public class ControladorCamera : MonoBehaviour
     private Vector2 offsetBlit  = Vector2.zero;              //   (para mapear pontos de volta)
     private float   tempoSemMao = 0f;
 
+    // Alinhamento da mao: o modelo de pontos foi treinado com a mao em pe.
+    // Girando o recorte para deixar a mao sempre na vertical, o modelo passa
+    // a enxergar o que espera, mesmo com a mao inclinada ou de lado.
+    // Usado apenas no celular, onde nao existe o rastreador externo.
+    private float anguloDaMao = 0f;
+    private bool  alinharMao  = false;
+
     private WebCamTexture minhaCamera;
     private HandLandmarkDetector detetive;
     private bool cameraPronta = false;
@@ -535,6 +542,7 @@ public class ControladorCamera : MonoBehaviour
                 {
                     centroCaixa = new Vector2(0.5f, 0.5f);
                     ladoCaixaPx = 0f;
+                    anguloDaMao = 0f; // volta a procurar a mao sem girar nada
                 }
             }
             return;
@@ -743,6 +751,11 @@ public class ControladorCamera : MonoBehaviour
             // A tela mostra uma fatia menor do sensor, sobrando mais folga
             // para a mao continuar visivel quando vai para os cantos
             zoomDaTela = 1.35f;
+
+            // O rastreador do celular e so o modelo de pontos, sem o estagio
+            // que o MediaPipe usa para endireitar a mao. Fazemos esse
+            // alinhamento aqui, girando o recorte a cada quadro.
+            alinharMao = true;
         }
 
         // Preferencias salvas de uma sessao anterior tem prioridade
@@ -827,9 +840,10 @@ public class ControladorCamera : MonoBehaviour
     }
 
     // Aplica giro, inversoes e recorte de uma vez so
-    void CopiarComGiro(RenderTexture destino, Vector2 centro, Vector2 tamanhoEmPixels)
+    void CopiarComGiro(RenderTexture destino, Vector2 centro, Vector2 tamanhoEmPixels,
+                       float grausExtra = 0f)
     {
-        float rad = GiroDaCamera * Mathf.Deg2Rad;
+        float rad = (GiroDaCamera + grausExtra) * Mathf.Deg2Rad;
         materialDeGiro.SetVector("_Giro", new Vector4(Mathf.Cos(rad), Mathf.Sin(rad), 0, 0));
         materialDeGiro.SetVector("_Centro", new Vector4(centro.x, centro.y, 0, 0));
         materialDeGiro.SetVector("_Tamanhos", new Vector4(
@@ -887,7 +901,8 @@ public class ControladorCamera : MonoBehaviour
             CopiarComGiro(texturaRecorte,
                           ParaFonte(new Vector2(offset.x + escala.x * 0.5f,
                                                 offset.y + escala.y * 0.5f)),
-                          new Vector2(lado, lado));
+                          new Vector2(lado, lado),
+                          alinharMao ? anguloDaMao : 0f);
         else
             Graphics.Blit(minhaCamera, texturaRecorte, escala, offset);
 
@@ -917,6 +932,22 @@ public class ControladorCamera : MonoBehaviour
             if (pontos[i].y > maxY) maxY = pontos[i].y;
         }
 
+        // Angulo da mao: direcao do pulso ate a base do dedo medio. Girando o
+        // recorte por 90 graus menos esse angulo, a mao chega em pe ao modelo.
+        if (alinharMao)
+        {
+            Vector2 direcao = new Vector2(
+                (pontos[9].x - pontos[0].x) * larguraDoQuadro,
+                (pontos[9].y - pontos[0].y) * alturaDoQuadro);
+
+            if (direcao.sqrMagnitude > 0.0001f)
+            {
+                float desejado = 90f - Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg;
+                // Suaviza pelo caminho mais curto, para o recorte nao saltar
+                anguloDaMao = Mathf.LerpAngle(anguloDaMao, desejado, 0.35f);
+            }
+        }
+
         Vector2 centro = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
         float larguraPx = (maxX - minX) * minhaCamera.width;
         float alturaPx  = (maxY - minY) * minhaCamera.height;
@@ -942,8 +973,21 @@ public class ControladorCamera : MonoBehaviour
         for (int i = 0; i < valores.Length; i++)
         {
             Vector2 v2 = detetive.GetKeyPoint(valores[i]);
-            pontos[i] = new Vector3(offsetBlit.x + v2.x * escalaBlit.x,
-                                    offsetBlit.y + v2.y * escalaBlit.y, 0f);
+            // O recorte pode ter sido girado para alinhar a mao; aqui o ponto
+            // volta para o sistema do quadro, desfazendo esse giro
+            float cx = v2.x - 0.5f, cy = v2.y - 0.5f;
+            if (alinharMao && Mathf.Abs(anguloDaMao) > 0.01f)
+            {
+                float r = anguloDaMao * Mathf.Deg2Rad;
+                float co = Mathf.Cos(r), se = Mathf.Sin(r);
+                float rx =  cx * co + cy * se;
+                float ry = -cx * se + cy * co;
+                cx = rx; cy = ry;
+            }
+
+            pontos[i] = new Vector3(
+                offsetBlit.x + escalaBlit.x * (0.5f + cx),
+                offsetBlit.y + escalaBlit.y * (0.5f + cy), 0f);
         }
         return pontos;
     }

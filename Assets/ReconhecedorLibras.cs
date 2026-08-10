@@ -20,18 +20,22 @@ public class ReconhecedorLibras : MonoBehaviour
     //
     // As coordenadas chegam normalizadas de 0 a 1 sobre o quadro, entao um
     // quadro deitado e um em pe deformam a mesma mao de formas diferentes.
-    // Multiplicar o eixo X pela proporcao do quadro devolve a forma real.
     //
-    // Alem disso, o rastreador do computador entrega profundidade e o do
-    // celular nao. Quando falta profundidade, a comparacao passa a ser feita
-    // em duas dimensoes dos DOIS lados, para nunca comparar coisas diferentes.
-    [HideInInspector] public float aspectoDaCamera = 4f / 3f;
+    // A correcao leva o que a camera atual entrega para o MESMO formato em que
+    // o banco foi gravado (quadro 4:3 do rastreador do computador). Quando a
+    // camera ja e 4:3, o fator vale 1 e nada muda: o computador se comporta
+    // exatamente como antes desta correcao existir.
+    const float ASPECTO_DO_BANCO = 4f / 3f;
+
+    [HideInInspector] public float aspectoDaCamera = ASPECTO_DO_BANCO;
     [HideInInspector] public bool  temProfundidade = true;
 
-    // Ponto vindo da camera agora: corrige proporcao e profundidade
+    // Ponto vindo da camera agora: leva ao formato do banco e trata a
+    // profundidade, que o rastreador do celular nao fornece
     Vector3 DaCamera(Vector3 p)
     {
-        return new Vector3(p.x * aspectoDaCamera, p.y, temProfundidade ? p.z : 0f);
+        float fator = aspectoDaCamera / ASPECTO_DO_BANCO;
+        return new Vector3(p.x * fator, p.y, temProfundidade ? p.z : 0f);
     }
 
     // Ponto do banco: ja esta com a proporcao corrigida desde a gravacao
