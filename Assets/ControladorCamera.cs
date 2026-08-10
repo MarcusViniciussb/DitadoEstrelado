@@ -119,7 +119,7 @@ public class ControladorCamera : MonoBehaviour
     private float   ladoCaixaPx = 0f;                        // lado do recorte em px (0 = busca ampla)
     private Vector2 escalaBlit  = Vector2.one;               // último recorte aplicado
     private Vector2 offsetBlit  = Vector2.zero;              //   (para mapear pontos de volta)
-    private int     framesSemMao = 0;
+    private float   tempoSemMao = 0f;
 
     private WebCamTexture minhaCamera;
     private HandLandmarkDetector detetive;
@@ -392,9 +392,13 @@ public class ControladorCamera : MonoBehaviour
         // No computador vale pedir mais resolucao; no celular uma imagem menor
         // rende bem mais quadros por segundo, que e o que importa aqui
 #if UNITY_ANDROID || UNITY_IOS
+        // Resolucao maior da mais detalhe ao recorte que a IA analisa. O custo
+        // e baixo porque o modelo so recebe o quadrado recortado, nao o quadro
+        // inteiro. Se o aparelho nao suportar, o Unity escolhe a mais proxima.
         string camera = EscolherCamera();
-        minhaCamera = (camera == null) ? new WebCamTexture(640, 480)
-                                       : new WebCamTexture(camera, 640, 480, 30);
+        minhaCamera = (camera == null) ? new WebCamTexture(1280, 720)
+                                       : new WebCamTexture(camera, 1280, 720, 30);
+        Application.targetFrameRate = 60; // nao segura o jogo em 30
 #else
         minhaCamera = new WebCamTexture(1280, 720);
 #endif
@@ -505,8 +509,12 @@ public class ControladorCamera : MonoBehaviour
         // Detecção com histerese: precisa de confiança ALTA (0.6) para começar,
         // mas só solta quando cair BEM (0.45). Isso elimina o pisca-pisca do
         // esqueleto quando a confiança fica oscilando perto do limite.
+        // No celular a imagem tem mais ruido e a confianca oscila mais; segurar
+        // um pouco mais a mao ja detectada evita o rastreio piscando
         float confianca = usandoExterno ? rastreadorExterno.Score : detetive.Score;
-        MaoDetectada = MaoDetectada ? (confianca >= 0.45f) : (confianca >= 0.6f);
+        float limiteEntrada = Application.isMobilePlatform ? 0.5f  : 0.6f;
+        float limiteSaida   = Application.isMobilePlatform ? 0.32f : 0.45f;
+        MaoDetectada = MaoDetectada ? (confianca >= limiteSaida) : (confianca >= limiteEntrada);
 
         if (!MaoDetectada)
         {
@@ -517,10 +525,13 @@ public class ControladorCamera : MonoBehaviour
 
             // Perdeu a mão (rastreador interno): depois de ~15 frames volta à
             // "busca ampla" (recorte grande no centro) para reencontrá-la
+            // Perdeu a mao: volta a busca ampla depois de meio segundo.
+            // Contar TEMPO em vez de quadros mantem a resposta igual no
+            // celular, que roda com menos quadros por segundo.
             if (!usandoExterno)
             {
-                framesSemMao++;
-                if (framesSemMao > 15)
+                tempoSemMao += Time.deltaTime;
+                if (tempoSemMao > 0.5f)
                 {
                     centroCaixa = new Vector2(0.5f, 0.5f);
                     ladoCaixaPx = 0f;
@@ -528,7 +539,7 @@ public class ControladorCamera : MonoBehaviour
             }
             return;
         }
-        framesSemMao = 0;
+        tempoSemMao = 0f;
 
         Vector3[] pontosDaMao = usandoExterno
             ? (Vector3[])rastreadorExterno.Pontos.Clone()
@@ -703,6 +714,11 @@ public class ControladorCamera : MonoBehaviour
         InverterVertical   = minhaCamera.videoVerticallyMirrored;
         InverterHorizontal = false;
 
+        // No celular o giro relatado costuma vir zerado; 90 graus e o valor
+        // que corresponde ao sensor da maioria dos aparelhos em retrato
+        if (Application.isMobilePlatform && GiroDaCamera == 0)
+            GiroDaCamera = 90;
+
         // Preferencias salvas de uma sessao anterior tem prioridade
         if (PlayerPrefs.HasKey("camGiro"))
         {
@@ -765,6 +781,25 @@ public class ControladorCamera : MonoBehaviour
         larguraTelaAnterior = 0;
     }
 
+    // Converte um ponto do quadro ENDIREITADO para a imagem ORIGINAL da camera.
+    // O recorte da mao e calculado no quadro endireitado, mas quem le a imagem
+    // e o shader, que trabalha sobre a imagem crua: sem esta conversao o
+    // recorte busca o pedaco errado assim que a mao sai do centro.
+    Vector2 ParaFonte(Vector2 uvEndireitado)
+    {
+        float rad = GiroDaCamera * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rad), sin = Mathf.Sin(rad);
+
+        Vector2 p = new Vector2((uvEndireitado.x - 0.5f) * larguraDoQuadro,
+                                (uvEndireitado.y - 0.5f) * alturaDoQuadro);
+        Vector2 g = new Vector2(p.x * cos + p.y * sin, -p.x * sin + p.y * cos);
+        if (InverterHorizontal) g.x = -g.x;
+        if (InverterVertical)   g.y = -g.y;
+
+        return new Vector2(0.5f + g.x / minhaCamera.width,
+                           0.5f + g.y / minhaCamera.height);
+    }
+
     // Aplica giro, inversoes e recorte de uma vez so
     void CopiarComGiro(RenderTexture destino, Vector2 centro, Vector2 tamanhoEmPixels)
     {
@@ -786,7 +821,7 @@ public class ControladorCamera : MonoBehaviour
     {
         // Primeiro endireita o quadro para a tela (quando ha giro a corrigir)
         if (materialDeGiro != null && texturaExibicao != null)
-            CopiarComGiro(texturaExibicao, new Vector2(0.5f, 0.5f),
+            CopiarComGiro(texturaExibicao, ParaFonte(new Vector2(0.5f, 0.5f)),
                           new Vector2(larguraDoQuadro, alturaDoQuadro));
 
         if (!zoomInteligente)
@@ -824,7 +859,8 @@ public class ControladorCamera : MonoBehaviour
         // sem giro, o caminho continua sendo o mesmo de antes
         if (materialDeGiro != null)
             CopiarComGiro(texturaRecorte,
-                          new Vector2(offset.x + escala.x * 0.5f, offset.y + escala.y * 0.5f),
+                          ParaFonte(new Vector2(offset.x + escala.x * 0.5f,
+                                                offset.y + escala.y * 0.5f)),
                           new Vector2(lado, lado));
         else
             Graphics.Blit(minhaCamera, texturaRecorte, escala, offset);
