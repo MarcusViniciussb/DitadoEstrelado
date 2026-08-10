@@ -396,19 +396,49 @@ se faz no manuscrito.
 
 ---
 
-## PARTE 5 — Resumo do que fazer
+## PARTE 5 — Ordem de execução
 
-1. Atualizar Materiais e métodos com a versão Android e a reformulação do
-   classificador (Parte 1).
-2. Trocar todos os números pelos da Parte 2, corrigindo o tamanho do banco para
-   515 estáticas / 42 dinâmicas / 557 total.
-3. Acrescentar os resultados novos: letras dinâmicas e análise de folga entre
-   pares.
-4. Precisar a situação do aprendizado automático — removido, mas as amostras que
-   ele gerou permanecem no banco.
-5. Reenquadrar segundo Design Science Research e reposicionar a contribuição
-   como estudo de ablação.
-6. Atualizar resumo, abstract e trabalhos futuros.
-7. Solicitar ao autor a medição de quadros por segundo no Android.
-8. Solicitar ao autor as capturas de tela da versão móvel.
-9. Transpor para o modelo da RBIE e conferir as diretrizes vigentes da revista.
+O prazo é hoje: a especialização exige comprovante de submissão. O que separa
+"avaliado" de "devolvido sem leitura" é forma, não mérito. Siga nesta ordem.
+
+### Primeiro — o que impede a submissão (fazer hoje, sem falta)
+
+1. **Anonimizar** (item 3.2): retirar cabeçalho de autoria, endereço do
+   repositório, e trocar ou tarjar a captura de tela que exibe os créditos com
+   os nomes. Limpar os metadados do PDF ao exportar.
+2. **Transpor para o modelo da RBIE** e conferir a extensão: entre 15 e 30
+   páginas, sem referências e apêndices.
+3. **Escrever a carta de apresentação** no modelo da revista, com os seis itens
+   exigidos, incluindo CRediT e a menção à ciência aberta (repositório público,
+   construtores versionados, banco de amostras disponível).
+4. **Acrescentar a frase sobre a base SOL** na seção de trabalhos relacionados.
+5. **Conferir que a declaração de uso de IA permanece** no manuscrito.
+
+### Segundo — o que torna o artigo mais forte (fazer se houver tempo hoje)
+
+6. Trocar todos os números pelos da Parte 2, corrigindo o tamanho do banco para
+   515 estáticas, 42 dinâmicas, 557 no total.
+7. Atualizar Materiais e métodos com a versão Android e a reformulação do
+   classificador (Parte 1), e retirar a implementação nativa da lista de
+   trabalhos futuros.
+8. Acrescentar os resultados novos: letras com movimento e separação entre pares.
+9. Precisar a situação do aprendizado automático — removido, porém as amostras
+   que ele gerou permanecem no banco, de modo que a ressalva sobre dependência
+   entre os conjuntos continua valendo.
+10. Atualizar resumo e abstract, que ainda trazem "97,7 por cento" e "514
+    amostras".
+11. Inserir as figuras novas (Parte 4), com atenção para que nenhuma delas
+    identifique a autoria.
+
+### Terceiro — o que pode ficar para a rodada de revisão
+
+12. Reenquadramento em Design Science Research (item 3.6).
+13. Medição de quadros por segundo da versão Android (item 2.7).
+14. Estudo de avaliação com aprendizes, que continua sendo o desdobramento mais
+    valioso e deve permanecer no texto como trabalho futuro prioritário.
+
+### O que perguntar ao autor
+
+- As capturas de tela da versão Android e da versão de computador, em formato
+  que não exiba os créditos com os nomes.
+- A medição de quadros por segundo no celular, se ele conseguir fazê-la a tempo.
