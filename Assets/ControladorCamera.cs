@@ -95,6 +95,12 @@ public class ControladorCamera : MonoBehaviour
     private float larguraDoQuadro = 0f, alturaDoQuadro = 0f;
     private float anguloDaMao = 0f;
     private bool  alinharMao  = false;
+
+    // MediaPipe nativo: no celular ele assume todo o rastreamento. No
+    // computador esta referencia fica nula e o caminho de sempre continua
+    // valendo, porque quem rastreia por la e o MediaPipe do Python.
+    private RastreadorMediaPipeAndroid mediapipe;
+    private bool MediaPipeAtivo { get { return mediapipe != null && mediapipe.Pronto; } }
 #if UNITY_ANDROID && !UNITY_EDITOR
     private MediaPipe.BlazePalm.PalmDetector detectorDePalma;
     private RenderTexture texturaDaPalma;
@@ -118,7 +124,9 @@ public class ControladorCamera : MonoBehaviour
 
     // Informacoes do painel de diagnostico
     public string FonteDeRastreamento =>
-        usandoExterno ? "externa (MediaPipe)" : (detetivePronto ? "interna" : "iniciando");
+        MediaPipeAtivo ? "MediaPipe (celular)"
+                       : (usandoExterno ? "externa (MediaPipe)"
+                                        : (detetivePronto ? "interna" : "iniciando"));
     public float ConfiancaAtual =>
         usandoExterno ? (rastreadorExterno != null ? rastreadorExterno.Score : 0f)
                       : (detetivePronto ? detetive.Score : 0f);
@@ -390,8 +398,14 @@ public class ControladorCamera : MonoBehaviour
     private int  palmasEncontradas = 0;
     private float tempoDoProximoTexto = 0f;
 
+    // Painel tecnico usado para investigar o rastreamento. Fica desligado:
+    // o jogador nao tem porque ver confianca, recorte e quadros por segundo.
+    const bool MOSTRAR_MEDICAO = false;
+
     void CriarPainelDeMedicao()
     {
+        if (!MOSTRAR_MEDICAO) return;
+
         var canvas = FindObjectOfType<Canvas>();
         if (canvas == null) return;
 
@@ -453,6 +467,13 @@ public class ControladorCamera : MonoBehaviour
         alinharMao = false;  // recorte alinhado aos eixos, sem giro extra
         zoomDaTela = 1.5f;   // a tela mostra menos, sobrando margem nas bordas
         IniciarCameraInterna();
+
+        // Sobe o MediaPipe do proprio Android. Se por algum motivo ele nao
+        // subir, o rastreador interno continua respondendo como antes.
+        mediapipe = new RastreadorMediaPipeAndroid();
+        yield return mediapipe.Iniciar();
+        if (!mediapipe.Pronto)
+            Debug.LogWarning("MediaPipe do celular nao iniciou: " + mediapipe.Erro);
     }
 
     string EscolherCamera()
@@ -728,9 +749,14 @@ public class ControladorCamera : MonoBehaviour
         // esqueleto quando a confiança fica oscilando perto do limite.
         float confianca = usandoExterno ? rastreadorExterno.Score : detetive.Score;
 #if UNITY_ANDROID && !UNITY_EDITOR
+        if (MediaPipeAtivo)
+        {
+            mediapipe.Atualizar();
+            confianca = mediapipe.Score;
+        }
         // Mais tolerancia para MANTER a mao ja encontrada: sinais de punho
         // fechado abaixam a confianca e o rastreio se perdia neles
-        MaoDetectada = MaoDetectada ? (confianca >= 0.25f) : (confianca >= 0.5f);
+        MaoDetectada = MaoDetectada ? (confianca >= 0.4f) : (confianca >= 0.6f);
 #else
         MaoDetectada = MaoDetectada ? (confianca >= 0.45f) : (confianca >= 0.6f);
 #endif
@@ -765,9 +791,10 @@ public class ControladorCamera : MonoBehaviour
         }
         framesSemMao = 0;
 
-        Vector3[] pontosDaMao = usandoExterno
-            ? (Vector3[])rastreadorExterno.Pontos.Clone()
-            : ColetarPontosDaMao();
+        Vector3[] pontosDaMao =
+            MediaPipeAtivo ? (Vector3[])mediapipe.Pontos.Clone()
+          : usandoExterno  ? (Vector3[])rastreadorExterno.Pontos.Clone()
+                           : ColetarPontosDaMao();
         PontosDaMaoAtuais = pontosDaMao;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -786,7 +813,8 @@ public class ControladorCamera : MonoBehaviour
 
         // Reposiciona o recorte para o próximo frame seguir a mão (só no interno;
         // o MediaPipe externo já faz o próprio recorte por dentro)
-        if (zoomInteligente && !usandoExterno) AtualizarCaixaDaMao(pontosDaMao, confianca);
+        if (zoomInteligente && !usandoExterno && !MediaPipeAtivo)
+            AtualizarCaixaDaMao(pontosDaMao, confianca);
 
         // Índice 8 = Index4 = ponta do dedo indicador
         Vector3 posicaoDaIA = pontosDaMao[8];
@@ -967,6 +995,16 @@ public class ControladorCamera : MonoBehaviour
 
         // Sem mao rastreada, procura a palma a cada quadro; com a mao em maos,
         // uma conferida por segundo basta e o custo fica baixo
+        // Com o MediaPipe nativo o trabalho acaba aqui: ele recebe a imagem
+        // inteira e cuida sozinho de achar a palma, recortar e endireitar.
+        if (MediaPipeAtivo)
+        {
+            mediapipe.Enviar(texturaExibicao);
+            escalaBlit = Vector2.one;
+            offsetBlit = Vector2.zero;
+            return;
+        }
+
         if (detectorDePalma != null &&
             (!MaoDetectada || Time.time >= tempoDaProximaBuscaDePalma))
         {
@@ -1181,6 +1219,8 @@ public class ControladorCamera : MonoBehaviour
 
     void OnDestroy()
     {
+        if (mediapipe != null) mediapipe.Encerrar();
+
         EncerrarProcessoDoRastreador(); // fecha o Python junto com o jogo
         detetive?.Dispose();
 #if UNITY_ANDROID && !UNITY_EDITOR
