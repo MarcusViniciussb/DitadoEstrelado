@@ -409,21 +409,18 @@ public class ControladorCamera : MonoBehaviour
         tempoDoProximoTexto = Time.unscaledTime + 0.2f;
 
         string letraEsperada = (gerenciador != null) ? gerenciador.LetraEsperada : "-";
+        string quebra = "\n";
         painelDeMedicao.text =
             "confianca " + ConfiancaAtual.ToString("F2") +
-            "   mao " + (MaoDetectada ? "SIM" : "nao") + "
-" +
+            "   mao " + (MaoDetectada ? "SIM" : "nao") + quebra +
             "palmas " + palmasEncontradas +
             "   recorte " + Mathf.RoundToInt(ladoCaixaPx) +
-            "px   giro " + Mathf.RoundToInt(anguloDaMao) + "
-" +
+            "px   giro " + Mathf.RoundToInt(anguloDaMao) + quebra +
             "esperada " + (string.IsNullOrEmpty(letraEsperada) ? "-" : letraEsperada) +
-            "   vista " + (reconhecedor != null ? reconhecedor.UltimaLetra : "-") + "
-" +
+            "   vista " + (reconhecedor != null ? reconhecedor.UltimaLetra : "-") + quebra +
             "distancia " + (reconhecedor != null && reconhecedor.UltimaDistancia < 9999f
                             ? reconhecedor.UltimaDistancia.ToString("F2") : "-") +
-            "   limite " + (reconhecedor != null ? reconhecedor.toleranciaDeErro.ToString("F1") : "-") + "
-" +
+            "   limite " + (reconhecedor != null ? reconhecedor.toleranciaDeErro.ToString("F1") : "-") + quebra +
             "quadros/s " + Mathf.RoundToInt(1f / Mathf.Max(0.0001f, Time.smoothDeltaTime));
     }
 
