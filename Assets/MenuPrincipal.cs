@@ -57,6 +57,10 @@ public class MenuPrincipal : MonoBehaviour
 
     // Orientacao da tela: false = celular (retrato), true = PC/tablet (paisagem)
     bool telaHorizontal;
+    // Verdadeiro quando o usuario escolheu o formato a dedo, nas opcoes.
+    // Enquanto for falso, o formato acompanha a janela.
+    bool escolhaDeTelaFeita;
+    int  larguraJanelaAnterior, alturaJanelaAnterior;
     CanvasScaler escalador;
 
     // Painel de opções (engrenagem): tela, tempo/vidas, espelho da câmera
@@ -85,7 +89,15 @@ public class MenuPrincipal : MonoBehaviour
     void Start()
     {
         // Recupera as escolhas da última vez (tela, tempo/vidas, espelho)
-        telaHorizontal = PlayerPrefs.GetInt("telaHorizontal", 0) == 1;
+        // Sem escolha salva, o formato segue o formato REAL da janela. O
+        // padrao antigo era sempre retrato, o que no computador montava um
+        // menu de celular numa janela larga e empilhava os elementos uns
+        // sobre os outros. So passa a valer a preferencia depois que alguem
+        // troca de propósito, pelas opcoes.
+        escolhaDeTelaFeita = PlayerPrefs.GetInt("telaEscolhida", 0) == 1;
+        telaHorizontal = escolhaDeTelaFeita
+            ? PlayerPrefs.GetInt("telaHorizontal", 0) == 1
+            : Screen.width >= Screen.height;
         if (gerenciador != null)
             gerenciador.modoSemPressao = PlayerPrefs.GetInt("semPressao", 0) == 1;
         AplicarEspelho(PlayerPrefs.GetInt("espelharImagem", 1) == 1);
@@ -99,6 +111,24 @@ public class MenuPrincipal : MonoBehaviour
 
     void Update()
     {
+        // Janela redimensionada no computador: enquanto ninguem tiver
+        // escolhido o formato a dedo, o layout acompanha a janela
+        if (Screen.width != larguraJanelaAnterior || Screen.height != alturaJanelaAnterior)
+        {
+            larguraJanelaAnterior = Screen.width;
+            alturaJanelaAnterior  = Screen.height;
+
+            if (!escolhaDeTelaFeita)
+            {
+                bool deitada = Screen.width >= Screen.height;
+                if (deitada != telaHorizontal)
+                {
+                    telaHorizontal = deitada;
+                    AplicarOrientacao();
+                }
+            }
+        }
+
         // Quando o jogo termina, espera e volta ao menu
         // (na vitória espera mais: tempo de curtir os confetes!)
         if (!menuAberto && gerenciador != null && gerenciador.JogoTerminado)
@@ -475,7 +505,9 @@ public class MenuPrincipal : MonoBehaviour
     {
         GerenciadorDeAudio.TocarClique();
         telaHorizontal = !telaHorizontal;
+        escolhaDeTelaFeita = true;
         PlayerPrefs.SetInt("telaHorizontal", telaHorizontal ? 1 : 0);
+        PlayerPrefs.SetInt("telaEscolhida", 1);
         AplicarOrientacao();
         AtualizarRotulosOpcoes();
     }

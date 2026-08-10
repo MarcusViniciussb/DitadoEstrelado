@@ -236,102 +236,141 @@ tela. Informe ao autor que essa medição é necessária antes de submeter.
 
 ---
 
-## PARTE 3 — Orientações para a RBIE
+## PARTE 3 — RBIE: exigências verificadas no site da revista
 
-### 3.1 O problema central da submissão, dito com franqueza
+As informações abaixo foram conferidas diretamente nas páginas de submissão e de
+diretrizes da RBIE. Elas substituem qualquer suposição anterior.
 
-A RBIE é periódico de **informática na educação**, Qualis A4. O critério que mais
-pesa não é a sofisticação técnica, e sim a **contribuição para a educação,
-sustentada por evidência**.
+### 3.1 A revista é Qualis A3 e aceita este tipo de trabalho
 
-O manuscrito hoje é, com honestidade explícita, um relato de viabilidade
-técnica: a seção 6.2 afirma que "nenhuma afirmação sobre ganho de desempenho,
-retenção ou motivação de estudantes pode ser sustentada pelos dados
-apresentados". Essa honestidade é uma virtude, e deve permanecer. Mas é preciso
-que o autor saiba, antes de submeter: **um artigo de artefato sem qualquer
-avaliação com aprendizes tende a receber rejeição ou revisão maior em periódico
-A4 da área de educação.** Não é defeito de redação; é ausência do tipo de
-evidência que a comunidade da revista espera.
+A página de diretrizes informa classificação **Qualis A3** (não A4). Mais
+importante: entre os tipos de contribuição aceitos está, textualmente,
+**"pesquisas em andamento apresentando novas ideias com resultados preliminares
+e discussões críticas, abordando problemas relevantes, descrevendo
+implementações de sistemas"**. Consta ainda, entre os objetivos da revista,
+"divulgar produtos de informática aplicáveis à educação".
 
-Há três caminhos. Apresente os três ao autor e deixe a decisão com ele.
+Isso muda o enquadramento: o manuscrito **não precisa** de estudo empírico com
+aprendizes para ser elegível. Ele se encaixa na categoria de pesquisa em
+andamento com implementação de sistema e resultados preliminares. A ausência de
+avaliação pedagógica continua sendo uma limitação a declarar com honestidade —
+como o texto já faz — mas não é impedimento de escopo.
 
-**Caminho A — Avaliação empírica antes de submeter (maior chance de aceitação)**
+Posicione o artigo explicitamente nessa categoria, e use o campo "Comentários
+para o editor" da submissão para dizê-lo.
 
-Mesmo um estudo modesto muda a natureza do artigo. Sugestão viável:
+### 3.2 Anonimização — risco imediato de devolução
 
-- 10 a 20 participantes, aprendizes de Libras;
-- pré-teste e pós-teste de datilologia (soletrar um conjunto fixo de palavras),
-  para medir ganho de desempenho;
-- instrumento validado de avaliação de jogos educacionais — o **MEEGA+** (Savi,
-  von Wangenheim e colaboradores) é o padrão na literatura brasileira da área e
-  será imediatamente reconhecido pelos revisores da RBIE;
-- participação de ao menos uma pessoa surda ou docente de educação bilíngue, o
-  que responde diretamente à limitação ética que o próprio manuscrito levanta na
-  seção 6.3;
-- submissão ao comitê de ética, necessária quando há pesquisa com seres humanos.
+A revisão é **duplamente anonimizada**. A submissão precisa omitir "qualquer
+informação que identifique a autoria: nomes e afiliações, títulos ou páginas de
+projetos, outras referências de um ou mais autores, metadados dos arquivos
+enviados".
 
-**Caminho B — Reenquadrar como Design Science Research (menor esforço)**
+O manuscrito atual **viola isso em quatro pontos**. Todos precisam ser tratados:
 
-A DSR é moldura consolidada e bem aceita na literatura brasileira de informática
-na educação para artigos de artefato. Ela legitima publicar o artefato com
-avaliação técnica rigorosa, posicionando a avaliação pedagógica como o ciclo
-seguinte — em vez de fazê-la parecer uma lacuna.
+1. **Cabeçalho de autoria** — nomes, instituição, ORCID e e-mails na primeira
+   página. Remover inteiramente.
+2. **Endereço do repositório** na seção de disponibilidade de dados. O endereço
+   contém o nome de usuário do autor. Substituir por algo como "repositório
+   público, endereço omitido para revisão anônima, a ser informado na versão
+   final".
+3. **Figura da tela inicial do jogo** — a interface exibe o nome do autor e o do
+   orientador nos créditos. Trocar por captura sem o painel de créditos, ou
+   tarjar a região.
+4. **Metadados do arquivo PDF** — autor e título ficam gravados nas propriedades
+   do documento. Limpar antes de gerar o PDF.
 
-O manuscrito já tem quase tudo: a seção 4.1 descreve modelo incremental com
-ciclos de construção e avaliação. Bastaria nomear explicitamente as etapas
-(identificação do problema, definição de objetivos, projeto e desenvolvimento,
-demonstração, avaliação, comunicação), declarar em que ciclo o trabalho se
-encontra e citar as referências canônicas da moldura. É edição de porte moderado
-com ganho considerável de aderência.
+Os nomes voltam na versão final, se o artigo for aceito.
 
-**Caminho C — Submeter antes ao SBIE**
+### 3.3 Itens obrigatórios da submissão
 
-O Simpósio Brasileiro de Informática na Educação é da mesma comunidade, aceita
-trabalhos em estágio menos maduro e devolve pareceres que orientam a versão de
-periódico. Caminho natural: SBIE primeiro, RBIE depois, com a avaliação empírica
-incorporada.
+- **Formato PDF**, usando o modelo LaTeX ou o modelo DOCX da RBIE.
+- **Extensão entre 15 e 30 páginas**, sem contar referências e apêndices.
+  Verifique a contagem depois de transpor para o modelo; com as figuras novas o
+  texto deve alcançar o mínimo com folga.
+- **Carta de apresentação obrigatória**, em PDF, feita a partir do modelo da
+  revista, contendo seis itens: escopo, contexto, ciência aberta, destaques da
+  pesquisa, autoria em taxonomia CRediT e conflitos de interesse.
+- **ORCID para todos os autores** — ambos já possuem, consta no manuscrito.
+- **Declaração CRediT também na carta**, além de constar no fim do artigo.
+- Idiomas aceitos: português, espanhol ou inglês. Sem taxas para autores.
 
-**Recomendação:** combinar B e C agora, e A antes de mirar a RBIE. Se o autor
-quiser submeter à RBIE de imediato, ao menos o caminho B é indispensável.
+Endereços dos modelos, conferidos:
 
-### 3.2 Ajustes de forma
+| Item | Endereço |
+|---|---|
+| Modelo do artigo em DOCX | https://journals-sol.sbc.org.br/index.php/rbie/libraryFiles/downloadPublic/73 |
+| Modelo em LaTeX | https://journals-sol.sbc.org.br/index.php/rbie/libraryFiles/downloadPublic/158 |
+| Modelo da carta de apresentação (DOCX) | https://journals-sol.sbc.org.br/index.php/rbie/libraryFiles/downloadPublic/123 |
+| Orientações sobre metadados e referências | https://journals-sol.sbc.org.br/index.php/rbie/libraryFiles/downloadPublic/71 |
 
-- **Modelo da revista**: o autor possui `RBIE_template_2023_v2-OTH.dotx` na pasta
-  de downloads. O texto precisa ser transposto para ele.
-- **Confirme nas diretrizes vigentes da revista** o formato de submissão, política
-  de anonimização, limite de páginas e normas de citação. Não presuma esses
-  itens — verifique no site do periódico.
-- **Declaração de uso de inteligência artificial**: o manuscrito já traz uma,
-  bem redigida e específica. **Mantenha-a.** Periódicos e comitês editoriais vêm
-  exigindo esse tipo de declaração, e ela é do interesse do autor: o que se
-  espera é transparência sobre o uso, não ausência de uso. Retirá-la de uma
-  submissão acadêmica seria omissão de informação relevante ao editor.
-- **Seções já presentes e bem-vindas**: contribuições CRediT, disponibilidade de
-  dados e código, questões éticas. Mantenha todas.
+### 3.4 Dois requisitos fáceis de perder de vista
 
-### 3.3 Ajustes de conteúdo sugeridos
+**a) A base SOL precisa ter sido consultada.** As diretrizes exigem que a
+SBC-OpenLib tenha sido incluída entre as bases consultadas na busca por
+trabalhos relacionados, e que isso fique evidente. Acrescente uma frase na
+seção de trabalhos relacionados declarando que a busca incluiu a SOL
+(https://sol.sbc.org.br/busca/), ao lado das demais bases. O manuscrito já cita
+trabalhos publicados na RBIE e no SBIE, o que sustenta a afirmação.
 
-1. **Reposicionar a contribuição.** Com os novos dados, o trabalho passa a ter um
-   resultado técnico defensável e não trivial: um **estudo de ablação** que
-   mostra que o critério de aceitação e a normalização de rotação, e não o
-   classificador em si, determinam a robustez do reconhecimento. Isso é
-   publicável e interessa a quem constrói sistemas semelhantes.
+**b) Uso de inteligência artificial deve ser identificado.** As diretrizes de
+ciência aberta afirmam que "o uso de conteúdo gerado por Inteligência Artificial
+deve ser devidamente identificado". A declaração já presente no manuscrito
+atende a essa exigência e **deve ser mantida**. Retirá-la descumpriria a
+política da revista.
 
-2. **Elevar a análise de folga entre pares a resultado** (item 2.6), com a
-   discussão sobre os limites da validação cruzada.
+### 3.5 Como a submissão é avaliada
 
-3. **Atualizar o resumo e o abstract** com os números novos e com a existência da
-   versão Android. O resumo atual cita "97,7 por cento" e "514 amostras".
+Três revisores independentes. Os critérios declarados: se o manuscrito ajuda a
+comunidade a avançar diante de um problema de pesquisa claro e relevante; se é
+cientificamente sólido e coerente; se duplica trabalho já publicado; se está
+suficientemente claro. Os revisores também indicam quão interessante e
+significativa é a pesquisa.
 
-4. **Revisar a seção 7**, retirando a migração para implementação nativa da lista
-   de trabalhos futuros e promovendo a avaliação pedagógica ao primeiro lugar.
+Consequências práticas para a redação:
 
-5. **Não superestimar.** Os números de acerto vêm de validação cruzada sobre
-   banco de um único usuário, parcialmente não independente. Nenhum deles pode
-   ser apresentado como "acurácia em uso real". O manuscrito já acerta nisso;
-   preserve o cuidado ao inserir os valores novos.
+- **Problema de pesquisa explícito e relevante.** O manuscrito já faz isso bem
+  na introdução, ao apontar a assimetria entre consultar como se faz o sinal e
+  verificar se o próprio gesto está correto. Mantenha esse parágrafo em
+  destaque.
+- **Solidez.** É onde os resultados novos ajudam mais. O estudo de ablação
+  (Parte 2) mostra, com medição, qual componente produz a robustez — é resultado
+  científico, não apenas descrição de sistema.
+- **Não duplicação.** Explicite o que distingue este trabalho do Libras ABC e
+  dos jogos analisados por Batista, Navarro e Kumada: aqui se verifica a
+  *produção* do gesto, não o reconhecimento visual por múltipla escolha.
+- **Clareza.** Figuras ajudam muito nesse critério (Parte 4).
 
----
+### 3.6 Design Science Research: reforço opcional, não obrigatório
+
+Design Science Research é uma **metodologia de pesquisa**, não uma revista. Ela
+organiza trabalhos cujo resultado é um artefato — um sistema, um método, um
+modelo — em etapas explícitas: identificação do problema, definição de
+objetivos, projeto e desenvolvimento, demonstração, avaliação e comunicação.
+Serve para mostrar que a construção do artefato seguiu um percurso metódico, e
+não improviso.
+
+Como a RBIE aceita explicitamente artigos que descrevem implementações de
+sistemas, **a moldura deixou de ser indispensável**. Continua sendo um reforço
+barato e de bom efeito, porque responde direto ao critério "cientificamente
+sólido e coerente".
+
+Se houver tempo, nomeie as etapas na seção 4.1, que já descreve ciclos de
+construção e avaliação, e declare em que ciclo o trabalho se encontra. Se não
+houver tempo hoje, não comprometa a submissão por isso — fica para a rodada de
+revisão, se os revisores pedirem.
+
+### 3.7 Recomendação
+
+Submeter à RBIE. A revista é A3, aceita explicitamente trabalhos que descrevem
+implementação de sistemas com resultados preliminares, não cobra taxas, e o
+manuscrito já está bem escrito e honesto quanto aos próprios limites. O trabalho
+de hoje é de forma, não de conteúdo: anonimizar, transpor para o modelo,
+escrever a carta de apresentação e atualizar os números.
+
+A avaliação com aprendizes continua sendo o desdobramento mais valioso, e deve
+permanecer no texto como trabalho futuro prioritário — mas não é pré-requisito
+para submeter a esta revista.
 
 ## PARTE 4 — Figuras
 
