@@ -9,12 +9,31 @@ public class ReconhecedorLibras : MonoBehaviour
     [Header("Conecte o 'MeuAlfabeto' aqui!")]
     public AlfabetoData bancoDeDados;
 
-    [Header("Aparece 'Desconhecido' demais? AUMENTE. Confunde letras? DIMINUA.")]
-    public float toleranciaDeErro = 6f;
+    [Header("Aceitacao do sinal")]
+    // Limite de seguranca: acima disso a mao nao parece com NADA do banco.
+    // Nao e mais o criterio principal - so evita aceitar uma mao qualquer.
+    public float limiteDeSeguranca = 12f;
+
+    // Criterio principal, e RELATIVO: a letra vencedora precisa estar este
+    // tanto mais perto do que a segunda colocada. Como compara duas distancias
+    // entre si, aguenta o dia ruim - quando a leitura piora, todas as
+    // distancias sobem juntas e a comparacao continua valendo. O limite fixo
+    // antigo simplesmente recusava tudo nessa situacao.
+    [Range(0.5f, 1f)] public float vantagemNecessaria = 0.95f;
+
+    // Abaixo desta distancia o sinal e obvio e o jogo aceita mais rapido
+    public float distanciaDeCerteza = 3f;
+
+    [Header("Giro da mao")]
+    // Endireita a palma antes de comparar, ate este limite. Absorve a
+    // inclinacao natural de quem sinaliza sem confundir letras que se
+    // distinguem justamente PELA orientacao: D e G tem quase a mesma forma,
+    // giradas cerca de 90 graus uma da outra, e por isso o giro e limitado.
+    [Range(0f, 90f)] public float giroMaximoCorrigido = 40f;
 
     [Header("Classificacao kNN")]
-    [Range(1, 7)]   public int   vizinhosK      = 3;    // quantas amostras próximas votam
-    [Range(0f, 3f)] public float pesoDosAngulos = 0.5f; // importância dos ângulos vs posições
+    [Range(1, 9)]   public int   vizinhosK      = 5;     // quantas amostras próximas votam
+    [Range(0f, 3f)] public float pesoDosAngulos = 0.25f; // importância dos ângulos vs posições
 
     // ── Compatibilidade do celular (nao afeta o computador) ─────────────────
     //
@@ -56,7 +75,9 @@ public class ReconhecedorLibras : MonoBehaviour
     [Header("Letras dinamicas (gravadas como MOVIMENTO, nao como foto)")]
     // (campo renomeado para o Unity aplicar a lista nova - W e Ç também se movem)
     public string[] letrasComMovimento = { "H", "J", "K", "W", "X", "Z", "Ç" };
-    public float toleranciaDinamica = 4.5f; // mesmo esquema: sobe = aceita mais facil
+    // Mesmo criterio das letras paradas: limite de seguranca largo + a folga
+    // para a rival e que decide (ver Aceita)
+    public float limiteDinamicoDeSeguranca = 9f;
 
     public bool EhLetraDinamica(string letra)
     {
@@ -171,6 +192,34 @@ public class ReconhecedorLibras : MonoBehaviour
     // do pulso até a base do dedo médio (ponto 9). Assim a mesma letra é
     // reconhecida perto OU longe da câmera, pois a escala deixa de importar.
     // Os dados já gravados continuam válidos: eles também passam por aqui.
+    // Endireita a palma: gira os pontos para que o eixo pulso -> base do dedo
+    // médio aponte para cima, mas nunca mais que 'giroMaximoCorrigido'.
+    // Sem isso, inclinar a mão 20 graus já era suficiente para o sistema
+    // deixar de reconhecer a letra.
+    Vector3[] EndireitarPalma(Vector3[] relativosAoPulso)
+    {
+        if (giroMaximoCorrigido <= 0f) return relativosAoPulso;
+
+        Vector2 eixo = new Vector2(relativosAoPulso[9].x, relativosAoPulso[9].y);
+        if (eixo.sqrMagnitude < 1e-10f) return relativosAoPulso;
+
+        // Quanto a palma está torta em relação ao "para cima" (0 = já está em pé)
+        float desvio = Mathf.Atan2(eixo.x, eixo.y);
+        float limite = giroMaximoCorrigido * Mathf.Deg2Rad;
+        desvio = Mathf.Clamp(desvio, -limite, limite);
+
+        float co = Mathf.Cos(desvio), se = Mathf.Sin(desvio);
+        var girados = new Vector3[21];
+        for (int i = 0; i < 21; i++)
+        {
+            Vector3 p = relativosAoPulso[i];
+            girados[i] = new Vector3(p.x * co - p.y * se,
+                                     p.x * se + p.y * co,
+                                     p.z);
+        }
+        return girados;
+    }
+
     static Vector3[] NormalizarEscala(Vector3[] relativosAoPulso)
     {
         float tamanhoMao = relativosAoPulso[9].magnitude;
@@ -222,38 +271,15 @@ public class ReconhecedorLibras : MonoBehaviour
 
     // Chamado automaticamente quando o jogador acerta uma letra no jogo.
     // Acumula até 30 amostras por letra sem logs excessivos.
-    public void AprendizagemAutomatica(string nomeDaLetra, Vector3[] pontosAtuais)
-    {
-        if (bancoDeDados == null) return;
-
-        // O banco so cresce durante o treinamento no computador. No celular a
-        // gravacao ficaria apenas na memoria e, pior, poderia misturar
-        // amostras de formatos diferentes no mesmo conjunto.
-        if (Application.isMobilePlatform) return;
-
-        int total = 0;
-        foreach (var l in bancoDeDados.letrasGravadas)
-            if (l.nome == nomeDaLetra) total++;
-
-        if (total >= 30) return; // limite para não crescer indefinidamente
-
-        var novaLetra = new AlfabetoData.LetraPadrao();
-        novaLetra.nome = nomeDaLetra;
-        novaLetra.pontosNormalizados = new Vector3[21];
-        Vector3 pulso = pontosAtuais[0];
-        for (int i = 0; i < 21; i++)
-            novaLetra.pontosNormalizados[i] = pontosAtuais[i] - pulso;
-
-        bancoDeDados.letrasGravadas.Add(novaLetra);
-
-#if UNITY_EDITOR
-        EditorUtility.SetDirty(bancoDeDados);
-        AssetDatabase.SaveAssets();
-#endif
-        // Loga apenas a cada 5 novas amostras para não poluir o Console
-        if ((total + 1) % 5 == 0)
-            Debug.Log("Aprendizado [" + nomeDaLetra + "]: " + (total + 1) + " amostras.");
-    }
+    // O aprendizado automatico foi retirado.
+    //
+    // Cada acerto durante o jogo virava uma nova amostra do banco. Parecia
+    // bom, mas gravava a mao como ela estava no instante do acerto - inclinada,
+    // meio fechada, com a leitura ruim - e o banco ia se enchendo de amostras
+    // deformadas. Quinze das vinte letras chegaram ao teto de 30 amostras por
+    // esse caminho, sem ninguem conferir nenhuma delas.
+    //
+    // O banco agora so muda no treinamento, com quem grava vendo o que gravou.
 
     // Grava um MOVIMENTO completo (sequência de quadros) para letra dinâmica
     public void GravarSinalDinamico(string nome, List<Vector3[]> quadrosAbsolutos)
@@ -322,7 +348,7 @@ public class ReconhecedorLibras : MonoBehaviour
         Vector3 pulso = corrigidos[0];
         Vector3[] rel = new Vector3[21];
         for (int i = 0; i < 21; i++) rel[i] = corrigidos[i] - pulso;
-        Vector3[] atualPos = NormalizarEscala(rel);
+        Vector3[] atualPos = NormalizarEscala(EndireitarPalma(rel));
         float[]   atualAng = ExtrairAngulos(corrigidos);
 
         // Distância da mão atual até TODAS as amostras gravadas
@@ -331,53 +357,68 @@ public class ReconhecedorLibras : MonoBehaviour
         foreach (var padrao in bancoDeDados.letrasGravadas)
         {
             for (int i = 0; i < 21; i++) amostra[i] = DoBanco(padrao.pontosNormalizados[i]);
-            Vector3[] padraoPos = NormalizarEscala(amostra);
+            Vector3[] padraoPos = NormalizarEscala(EndireitarPalma(amostra));
             float[]   padraoAng = ExtrairAngulos(amostra);
             float dist = DistanciaEntre(atualPos, atualAng, padraoPos, padraoAng);
             candidatos.Add(new KeyValuePair<float, string>(dist, padrao.nome));
         }
         candidatos.Sort((a, b) => a.Key.CompareTo(b.Key));
 
-        // Votação kNN: as K amostras mais próximas votam, a maioria vence.
-        // Uma amostra ruim isolada perde a eleição em vez de decidir sozinha.
+        // Votação kNN com peso: cada uma das K amostras mais próximas vota com
+        // força 1/distância, então uma amostra bem parecida pesa mais que outra
+        // que só entrou na lista por falta de concorrência.
         int k = Mathf.Min(vizinhosK, candidatos.Count);
-        var votos             = new Dictionary<string, int>();
+        var forca             = new Dictionary<string, float>();
         var melhorDistDaLetra = new Dictionary<string, float>();
         for (int i = 0; i < k; i++)
         {
-            string nome = candidatos[i].Value;
-            votos[nome] = votos.ContainsKey(nome) ? votos[nome] + 1 : 1;
+            string nome  = candidatos[i].Value;
+            float  peso  = 1f / (candidatos[i].Key + 0.5f);
+            forca[nome]  = forca.ContainsKey(nome) ? forca[nome] + peso : peso;
             if (!melhorDistDaLetra.ContainsKey(nome))
                 melhorDistDaLetra[nome] = candidatos[i].Key; // lista ordenada -> 1ª é a menor
         }
 
         string vencedora = "";
-        int maisVotos = 0;
-        foreach (var par in votos)
-        {
-            bool ganha = par.Value > maisVotos ||
-                         (par.Value == maisVotos && vencedora != "" &&
-                          melhorDistDaLetra[par.Key] < melhorDistDaLetra[vencedora]);
-            if (ganha) { vencedora = par.Key; maisVotos = par.Value; }
-        }
+        float  maiorForca = -1f;
+        foreach (var par in forca)
+            if (par.Value > maiorForca) { maiorForca = par.Value; vencedora = par.Key; }
 
         float menorDistancia = melhorDistDaLetra[vencedora];
+
+        // Melhor distância de uma letra DIFERENTE: a rival mais próxima
+        float distanciaDaRival = float.MaxValue;
+        foreach (var c in candidatos)
+            if (c.Value != vencedora) { distanciaDaRival = c.Key; break; }
+
         UltimaDistancia = menorDistancia;
         UltimaLetra     = vencedora;
 
-        // Debug: mostra a cada 0.5s a eleição e a distância.
-        // Use para calibrar a tolerância: faça o sinal correto, veja a distância
-        // típica, e deixe a tolerância um pouco ACIMA desse valor.
+        // Debug: mostra a cada 0.5s a eleição, a distância e a da rival.
+        // O que importa é a FOLGA entre as duas: quanto maior, mais seguro.
         if (mostrarDebug && Time.time - tempoUltimoDebug > 0.5f)
         {
             tempoUltimoDebug = Time.time;
-            string veredito = (menorDistancia < toleranciaDeErro) ? "ACEITA" : "recusada";
-            Debug.Log("Mais parecido: [" + vencedora + "] " + maisVotos + "/" + k +
-                      " votos, distancia " + menorDistancia.ToString("F2") +
-                      " / tolerancia " + toleranciaDeErro + " -> " + veredito);
+            Debug.Log("Mais parecido: [" + vencedora + "] entre " + k +
+                      " vizinhos, distancia " + menorDistancia.ToString("F2") +
+                      ", rival a " + distanciaDaRival.ToString("F2") +
+                      " -> " + (Aceita(menorDistancia, distanciaDaRival) ? "ACEITA" : "recusada"));
         }
 
-        return (menorDistancia < toleranciaDeErro) ? vencedora : "Desconhecido";
+        return Aceita(menorDistancia, distanciaDaRival) ? vencedora : "Desconhecido";
+    }
+
+    // Duas condições para dar a letra por feita:
+    //   1. a mão parece com alguma coisa do banco (limite de segurança);
+    //   2. a vencedora ganha da rival com folga.
+    // A segunda é o critério de verdade, e é relativa: se a leitura piorar,
+    // as duas distâncias sobem juntas e a comparação continua honesta. Era
+    // exatamente aí que o limite fixo falhava - bastava a mão inclinar um
+    // pouco para TUDO passar do limite e nada mais ser reconhecido.
+    bool Aceita(float distanciaDaVencedora, float distanciaDaRival)
+    {
+        return distanciaDaVencedora < limiteDeSeguranca &&
+               distanciaDaVencedora < vantagemNecessaria * distanciaDaRival;
     }
 
     // ── Letras dinâmicas: comparação de MOVIMENTOS via DTW ───────────────────
@@ -400,11 +441,13 @@ public class ReconhecedorLibras : MonoBehaviour
             var relativo = new Vector3[21];
             Vector3 pulso = DaCamera(absoluto[0]);
             for (int i = 0; i < 21; i++) relativo[i] = DaCamera(absoluto[i]) - pulso;
-            janela.Add(NormalizarEscala(relativo));
+            janela.Add(NormalizarEscala(EndireitarPalma(relativo)));
         }
 
         string melhor = "Desconhecido";
         float  menor  = float.MaxValue;
+        // Melhor custo de um movimento de OUTRA letra, para medir a folga
+        var menorPorLetra = new Dictionary<string, float>();
 
         foreach (var sinal in bancoDeDados.sinaisDinamicos)
         {
@@ -413,10 +456,12 @@ public class ReconhecedorLibras : MonoBehaviour
             {
                 var q = new Vector3[21];
                 for (int i = 0; i < 21; i++) q[i] = DoBanco(quadro.pontos[i]);
-                amostra.Add(NormalizarEscala(q));
+                amostra.Add(NormalizarEscala(EndireitarPalma(q)));
             }
 
             float custo = CustoDTW(janela, amostra);
+            if (!menorPorLetra.ContainsKey(sinal.nome) || custo < menorPorLetra[sinal.nome])
+                menorPorLetra[sinal.nome] = custo;
             if (custo < menor)
             {
                 menor  = custo;
@@ -424,15 +469,21 @@ public class ReconhecedorLibras : MonoBehaviour
             }
         }
 
+        float custoDaRival = float.MaxValue;
+        foreach (var par in menorPorLetra)
+            if (par.Key != melhor && par.Value < custoDaRival) custoDaRival = par.Value;
+
         if (mostrarDebug && menor < float.MaxValue &&
             Time.time - tempoUltimoDebugDinamico > 0.6f)
         {
             tempoUltimoDebugDinamico = Time.time;
             Debug.Log("Movimento mais parecido: [" + melhor + "] custo " +
-                      menor.ToString("F2") + " / tolerancia " + toleranciaDinamica);
+                      menor.ToString("F2") + ", rival a " + custoDaRival.ToString("F2"));
         }
 
-        return (menor < toleranciaDinamica) ? melhor : "Desconhecido";
+        bool aceita = menor < limiteDinamicoDeSeguranca &&
+                      menor < vantagemNecessaria * custoDaRival;
+        return aceita ? melhor : "Desconhecido";
     }
 
     static float DistanciaEntreQuadros(Vector3[] a, Vector3[] b)

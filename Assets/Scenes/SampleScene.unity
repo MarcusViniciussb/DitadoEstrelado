@@ -1139,9 +1139,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReconhecedorLibras
   bancoDeDados: {fileID: 11400000, guid: 5fc1247038b10c84eaa91b1c244f8b3f, type: 2}
-  toleranciaDeErro: 6
-  vizinhosK: 3
-  pesoDosAngulos: 1
+  vizinhosK: 5
+  pesoDosAngulos: 0.25
   letrasDinamicas:
   - H
   - J
@@ -1149,7 +1148,6 @@ MonoBehaviour:
   - X
   - Z
   - "\xC7"
-  toleranciaDinamica: 4.5
   mostrarDebug: 0
 --- !u!1 &832575517
 GameObject:

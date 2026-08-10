@@ -441,7 +441,7 @@ public class ControladorCamera : MonoBehaviour
             "   vista " + (reconhecedor != null ? reconhecedor.UltimaLetra : "-") + quebra +
             "distancia " + (reconhecedor != null && reconhecedor.UltimaDistancia < 9999f
                             ? reconhecedor.UltimaDistancia.ToString("F2") : "-") +
-            "   limite " + (reconhecedor != null ? reconhecedor.toleranciaDeErro.ToString("F1") : "-") + quebra +
+            "   limite " + (reconhecedor != null ? reconhecedor.limiteDeSeguranca.ToString("F1") : "-") + quebra +
             "quadros/s " + Mathf.RoundToInt(1f / Mathf.Max(0.0001f, Time.smoothDeltaTime));
     }
 
@@ -885,7 +885,7 @@ public class ControladorCamera : MonoBehaviour
             }
 
             // Sinal MUITO parecido com o gravado? Aceita na metade do tempo.
-            float tempoNecessario = (reconhecedor.UltimaDistancia < reconhecedor.toleranciaDeErro * 0.5f)
+            float tempoNecessario = (reconhecedor.UltimaDistancia < reconhecedor.distanciaDeCerteza)
                                     ? tempoEstabilidade * 0.5f
                                     : tempoEstabilidade;
 
@@ -898,8 +898,6 @@ public class ControladorCamera : MonoBehaviour
             bool acertou = gerenciador.TentarLetra(letraFeita);
             if (acertou)
             {
-                // Aprendizado automático: cada acerto vira nova amostra de treinamento
-                reconhecedor.AprendizagemAutomatica(letraFeita, pontosDaMao);
                 tempoUltimoReconhecimento = Time.time;
                 LimparCandidata();
             }
