@@ -26,11 +26,13 @@ Shader "DitadoEstrelado/RotacaoCamera"
 
             // x,y = cosseno e seno do giro
             float4 _Giro;
-            // x,y = centro do recorte (uv);  z,w = nao usado
+            // x,y = centro do recorte (uv)
             float4 _Centro;
             // x,y = tamanho da area de saida em pixels da FONTE
             // z,w = tamanho da textura de origem em pixels
             float4 _Tamanhos;
+            // x,y = 1 ou -1 para inverter horizontal e vertical
+            float4 _Espelho;
 
             struct entrada  { float4 vertex : POSITION; float2 uv : TEXCOORD0; };
             struct saida    { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -51,6 +53,10 @@ Shader "DitadoEstrelado/RotacaoCamera"
                 // Giro inverso: leva o pixel de saida ate a origem certa
                 float2 girado = float2( p.x * _Giro.x + p.y * _Giro.y,
                                        -p.x * _Giro.y + p.y * _Giro.x);
+
+                // Inversao aplicada ja no espaco da imagem de origem, o que
+                // deixa o resultado previsivel em qualquer angulo de giro
+                girado *= _Espelho.xy;
 
                 float2 uv = _Centro.xy + girado / _Tamanhos.zw;
                 return tex2D(_MainTex, saturate(uv));

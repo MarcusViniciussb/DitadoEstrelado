@@ -88,9 +88,31 @@ public class ControladorCamera : MonoBehaviour
     // a imagem deitada). O quadro endireitado alimenta o detector E a tela.
     private Material materialDeGiro;
     private RenderTexture texturaExibicao;
-    private int   giroDaCamera = 0;
-    private bool  fonteEspelhada = false;
     private float larguraDoQuadro = 0f, alturaDoQuadro = 0f;
+
+    // Ajuste da imagem da camera. O aparelho informa valores em Giro e
+    // InverterVertical, mas cada modelo de celular relata isso de um jeito;
+    // por isso os tres campos podem ser corrigidos pelo painel de opcoes.
+    public int  GiroDaCamera        { get; private set; }
+    public bool InverterVertical    { get; private set; }
+    public bool InverterHorizontal  { get; private set; }
+
+    public void DefinirAjusteDaCamera(int giro, bool vertical, bool horizontal)
+    {
+        GiroDaCamera       = ((giro % 360) + 360) % 360;
+        InverterVertical   = vertical;
+        InverterHorizontal = horizontal;
+        AtualizarTamanhoDoQuadro();
+    }
+
+    // Informacoes para o painel de diagnostico
+    public string FonteDeRastreamento =>
+        usandoExterno ? "externa (MediaPipe)" : (detetivePronto ? "interna" : "iniciando");
+    public float ConfiancaAtual =>
+        usandoExterno ? (rastreadorExterno != null ? rastreadorExterno.Score : 0f)
+                      : (detetivePronto ? detetive.Score : 0f);
+    public string ResolucaoDaCamera =>
+        (minhaCamera == null) ? "-" : minhaCamera.width + "x" + minhaCamera.height;
 
     private RenderTexture texturaRecorte;                    // quadrado enviado à IA
     private Vector2 centroCaixa = new Vector2(0.5f, 0.5f);   // centro do recorte (normalizado)
@@ -676,18 +698,30 @@ public class ControladorCamera : MonoBehaviour
     // No computador o giro costuma ser zero e nada muda.
     void PrepararCorrecaoDeGiro()
     {
-        giroDaCamera   = minhaCamera.videoRotationAngle;
-        fonteEspelhada = minhaCamera.videoVerticallyMirrored;
+        // Valores sugeridos pelo aparelho, que o usuario pode corrigir depois
+        GiroDaCamera       = ((minhaCamera.videoRotationAngle % 360) + 360) % 360;
+        InverterVertical   = minhaCamera.videoVerticallyMirrored;
+        InverterHorizontal = false;
 
-        bool deitada = (giroDaCamera == 90 || giroDaCamera == 270);
-        larguraDoQuadro = deitada ? minhaCamera.height : minhaCamera.width;
-        alturaDoQuadro  = deitada ? minhaCamera.width  : minhaCamera.height;
-
-        if (giroDaCamera == 0 && !fonteEspelhada)
+        // Preferencias salvas de uma sessao anterior tem prioridade
+        if (PlayerPrefs.HasKey("camGiro"))
         {
-            // Nada a corrigir: a propria WebCamTexture ja serve
+            GiroDaCamera       = PlayerPrefs.GetInt("camGiro", GiroDaCamera);
+            InverterVertical   = PlayerPrefs.GetInt("camInvV", InverterVertical ? 1 : 0) == 1;
+            InverterHorizontal = PlayerPrefs.GetInt("camInvH", 0) == 1;
+        }
+
+        AtualizarTamanhoDoQuadro();
+
+        // No celular a correcao fica sempre ligada, para o ajuste pela tela
+        // funcionar mesmo que o aparelho tenha informado giro zero
+        bool precisaCorrigir = Application.isMobilePlatform ||
+                               GiroDaCamera != 0 || InverterVertical || InverterHorizontal;
+
+        if (!precisaCorrigir)
+        {
             fundoDoEcra.texture = minhaCamera;
-            Debug.Log("Camera sem giro: " + minhaCamera.width + "x" + minhaCamera.height);
+            Debug.Log("Camera sem giro: " + ResolucaoDaCamera);
             return;
         }
 
@@ -703,19 +737,45 @@ public class ControladorCamera : MonoBehaviour
         texturaExibicao.wrapMode = TextureWrapMode.Clamp;
         fundoDoEcra.texture = texturaExibicao;
 
-        Debug.Log("Camera girada em " + giroDaCamera + " graus; imagem corrigida para " +
+        Debug.Log("Camera: giro " + GiroDaCamera + ", inverter V " + InverterVertical +
+                  ", H " + InverterHorizontal + ", quadro " +
                   larguraDoQuadro + "x" + alturaDoQuadro);
     }
 
-    // Aplica giro e recorte de uma vez so
+    void AtualizarTamanhoDoQuadro()
+    {
+        if (minhaCamera == null || minhaCamera.width < 100) return;
+
+        bool deitada = (GiroDaCamera == 90 || GiroDaCamera == 270);
+        larguraDoQuadro = deitada ? minhaCamera.height : minhaCamera.width;
+        alturaDoQuadro  = deitada ? minhaCamera.width  : minhaCamera.height;
+
+        // A textura de exibicao acompanha a troca de lados
+        if (texturaExibicao != null &&
+            (texturaExibicao.width != (int)larguraDoQuadro ||
+             texturaExibicao.height != (int)alturaDoQuadro))
+        {
+            texturaExibicao.Release();
+            texturaExibicao = new RenderTexture((int)larguraDoQuadro, (int)alturaDoQuadro, 0);
+            texturaExibicao.wrapMode = TextureWrapMode.Clamp;
+            fundoDoEcra.texture = texturaExibicao;
+        }
+
+        // Obriga o recorte de tela a ser recalculado
+        larguraTelaAnterior = 0;
+    }
+
+    // Aplica giro, inversoes e recorte de uma vez so
     void CopiarComGiro(RenderTexture destino, Vector2 centro, Vector2 tamanhoEmPixels)
     {
-        float rad = giroDaCamera * Mathf.Deg2Rad;
+        float rad = GiroDaCamera * Mathf.Deg2Rad;
         materialDeGiro.SetVector("_Giro", new Vector4(Mathf.Cos(rad), Mathf.Sin(rad), 0, 0));
         materialDeGiro.SetVector("_Centro", new Vector4(centro.x, centro.y, 0, 0));
         materialDeGiro.SetVector("_Tamanhos", new Vector4(
-            tamanhoEmPixels.x, fonteEspelhada ? -tamanhoEmPixels.y : tamanhoEmPixels.y,
+            tamanhoEmPixels.x, tamanhoEmPixels.y,
             minhaCamera.width, minhaCamera.height));
+        materialDeGiro.SetVector("_Espelho", new Vector4(
+            InverterHorizontal ? -1f : 1f, InverterVertical ? -1f : 1f, 0, 0));
         Graphics.Blit(minhaCamera, destino, materialDeGiro);
     }
 
