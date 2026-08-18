@@ -631,12 +631,24 @@ public class MenuPrincipal : MonoBehaviour
                 : estrelasBase[i];
 
         // ── Jogo ──
-        // Cartão da palavra com "slot" à esquerda para o objeto 3D
+        // Cartão da palavra com "slot" à esquerda para o objeto 3D.
+        //
+        // Estes elementos sao ancorados a BASE da tela com o pivo no centro,
+        // entao a altura informada e a distancia da borda de baixo ate o MEIO
+        // do elemento. Valores negativos jogam o cartao para fora da tela, que
+        // era o que acontecia na paisagem: so a beirada de cima aparecia.
+        //
+        // Na horizontal o cartao encolheu de 1200 para 1000. Com 1200, somado
+        // aos dois botoes de 390, dava 1980 numa tela de 1920: nao cabiam lado
+        // a lado e se invadiam.
+        const float ALTURA_DO_RODAPE = 150f;   // meio do cartao acima da borda
+        const float LADO_DOS_BOTOES  = 715f;   // afastamento que evita o cartao
+
         if (painelPalavra != null)
         {
             PosTam((RectTransform)painelPalavra.transform,
                 new Vector2(0, 330), new Vector2(960, 250),
-                new Vector2(0, -60), new Vector2(1200, 240));
+                new Vector2(0, ALTURA_DO_RODAPE), new Vector2(1000, 240));
 
             if (uiControle == null)
                 uiControle = painelPalavra.GetComponentInChildren<UIControle>(true);
@@ -646,11 +658,11 @@ public class MenuPrincipal : MonoBehaviour
         if (botaoPular != null)
             PosTam((RectTransform)botaoPular.transform,
                 new Vector2(250, 105), new Vector2(470, 115),
-                new Vector2(770, -60), new Vector2(390, 115));
+                new Vector2(LADO_DOS_BOTOES, ALTURA_DO_RODAPE), new Vector2(390, 115));
         if (botaoPularLetra != null)
             PosTam((RectTransform)botaoPularLetra.transform,
                 new Vector2(-250, 105), new Vector2(470, 115),
-                new Vector2(-770, -60), new Vector2(390, 115));
+                new Vector2(-LADO_DOS_BOTOES, ALTURA_DO_RODAPE), new Vector2(390, 115));
 
         larguraDoSlot = h ? 300f : 260f;
         PosicionarObjeto3D();
