@@ -592,18 +592,29 @@ public class MenuPrincipal : MonoBehaviour
                             new Vector2(490,  45), new Vector2(420, 120));
         PosTam(rtSair,      new Vector2(0, -325), new Vector2(560, 120),
                             new Vector2(0,  -90), new Vector2(320, 100));
-        // Presos a base da tela: assim continuam visiveis em qualquer
-        // proporcao de janela, inclusive quando ela nao corresponde a
-        // orientacao escolhida
-        if (rtDicaMenu != null)
-        {
-            UIFabrica.Ancorar(rtDicaMenu, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
-            rtDicaMenu.anchoredPosition = h ? new Vector2(0, 330) : new Vector2(0, 400);
-        }
+        // Bloco do rodape: creditos colados na base e a dica logo acima deles.
+        // Presos a base para continuarem visiveis em qualquer proporcao de
+        // janela, inclusive quando ela nao corresponde a orientacao escolhida.
+        //
+        // As duas alturas saem do TAMANHO REAL do cartao, e nao de numeros
+        // escolhidos a mao. Ancorar deixa o pivo na base do elemento, entao
+        // uma posicao 165 nao significa "a 165 da borda", e sim "comeca em 165
+        // e sobe a propria altura" - com um cartao de 260 o bloco ia ate 425 e
+        // engolia a dica, que estava fixada em 330.
+        const float MARGEM_DA_BASE = 24f;  // folga entre o cartao e a borda
+        const float FOLGA_DA_DICA  = 18f;  // folga entre o cartao e a dica
+
+        float topoDosCreditos = MARGEM_DA_BASE;
         if (rtCreditos != null)
         {
             UIFabrica.Ancorar(rtCreditos, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
-            rtCreditos.anchoredPosition = new Vector2(0, 165);
+            rtCreditos.anchoredPosition = new Vector2(0, MARGEM_DA_BASE);
+            topoDosCreditos = MARGEM_DA_BASE + rtCreditos.sizeDelta.y;
+        }
+        if (rtDicaMenu != null)
+        {
+            UIFabrica.Ancorar(rtDicaMenu, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            rtDicaMenu.anchoredPosition = new Vector2(0, topoDosCreditos + FOLGA_DA_DICA);
         }
 
         // Luzes acompanham o título; estrelas se espalham na largura nova
