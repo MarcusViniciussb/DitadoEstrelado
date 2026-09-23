@@ -85,19 +85,21 @@ public class UIControle : MonoBehaviour
             var hr = hud.rectTransform;
             hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f);
             hr.pivot = new Vector2(0.5f, 1f); hr.anchoredPosition = Vector2.zero;
+            Canvas.ForceUpdateCanvases();
+            hr.sizeDelta = new Vector2(0f, hr.rect.width * 0.1345f); // ja no tamanho certo
             painelStats = hud.gameObject; chipScore = painelStats; hudRect = hr;
 
             textoScore = OverlayTexto(hud.transform, "Pontos", "0", 60f, Color.white,
                 new Vector2(0.168f, 0.71f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
             containerVidas = OverlayTexto(hud.transform, "Vidas", "", 10f, Color.white,
-                new Vector2(0.108f, 0.30f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
+                new Vector2(0.132f, 0.315f), new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
             textoTempo = OverlayTexto(hud.transform, "Tempo", "0", 68f, COR_TEMPO_OK,
                 new Vector2(0.260f, 0.463f), new Vector2(0.5f, 0.5f), TextAlignmentOptions.Center);
 
             for (int i = 0; i < 5; i++)
             {
                 var coracao = UIFabrica.CriarImagem(containerVidas.transform, "Coracao" + i,
-                    COR_VIDA, new Vector2(i * 52f, 0), new Vector2(46, 46), UIFabrica.Coracao());
+                    COR_VIDA, new Vector2(i * 44f, 0), new Vector2(40, 40), UIFabrica.Coracao());
                 coracao.raycastTarget = false;
                 coracoes.Add(coracao.gameObject);
             }

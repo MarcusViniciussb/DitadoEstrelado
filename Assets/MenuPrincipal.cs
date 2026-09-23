@@ -789,12 +789,12 @@ public class MenuPrincipal : MonoBehaviour
         }
         if (botaoPular != null)               // PULAR PALAVRA, a direita do centro
             PosTam((RectTransform)botaoPular.transform,
-                new Vector2( 270, 175), new Vector2(500, 202),
-                new Vector2( 300, 175), new Vector2(540, 218));
+                new Vector2( 270, 175), new Vector2(500, 178),
+                new Vector2( 300, 175), new Vector2(540, 192));
         if (botaoPularLetra != null)          // PULAR LETRA, a esquerda do centro
             PosTam((RectTransform)botaoPularLetra.transform,
-                new Vector2(-270, 175), new Vector2(500, 202),
-                new Vector2(-300, 175), new Vector2(540, 218));
+                new Vector2(-270, 175), new Vector2(500, 178),
+                new Vector2(-300, 175), new Vector2(540, 192));
 
         larguraDoSlot = h ? 300f : 260f;
         PosicionarObjeto3D();
