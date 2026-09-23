@@ -26,13 +26,14 @@ public class MenuPrincipal : MonoBehaviour
     static readonly Color COR_SINAIS     = new Color(0.922f, 0.596f, 0.184f, 1f); // #EB982F laranja aprendizado
     static readonly Color COR_TREINAR    = new Color(0.149f, 0.584f, 0.816f, 1f); // #2695D0 azul foco
     static readonly Color COR_SAIR       = new Color(0.816f, 0.282f, 0.227f, 1f); // #D0483A vermelho sair
-    static readonly Color COR_HUD        = new Color(0.08f, 0.10f, 0.30f, 0.75f);
+    static readonly Color COR_HUD        = new Color(0.102f, 0.137f, 0.494f, 1f); // #1A237E
 
     [Header("Senha da area do professor (modo treinamento)")]
     public string senhaAdmin = "1234";
 
     GameObject telaMenu;
     GameObject botaoMenuHud;
+    GameObject headerBar;          // barra unica #1A237E no topo, durante o jogo
     GameObject dicaTreinamento;
     TextMeshProUGUI textoContagem; // contador de amostras por letra (treinamento)
 
@@ -343,6 +344,25 @@ public class MenuPrincipal : MonoBehaviour
 
     void ConstruirHud()
     {
+        // Barra única do topo: uma faixa cheia #1A237E atrás de pontos, vidas,
+        // tempo, menu e som, unificando tudo num só cabeçalho. Fica ATRÁS de
+        // todos (SetAsFirstSibling), então os chips e botões continuam por cima
+        // e funcionando; a cor deles virou a mesma da barra, formando uma faixa
+        // contínua. A barra só aparece no jogo, junto com o botão MENU.
+        var header = UIFabrica.CriarImagem(transform, "HeaderBar",
+            new Color(0.102f, 0.137f, 0.494f, 1f), Vector2.zero, new Vector2(0, 200),
+            UIFabrica.Arredondado(), true);
+        var hr = header.rectTransform;
+        hr.anchorMin = new Vector2(0f, 1f);
+        hr.anchorMax = new Vector2(1f, 1f);
+        hr.pivot     = new Vector2(0.5f, 1f);
+        hr.sizeDelta = new Vector2(0, 200);
+        hr.anchoredPosition = Vector2.zero;
+        header.raycastTarget = false;
+        header.transform.SetAsFirstSibling();
+        headerBar = header.gameObject;
+        headerBar.SetActive(false);
+
         // Botão MENU no canto superior direito (visível durante jogo/treinamento)
         var botao = UIFabrica.CriarBotao(transform, "BotaoMenuHud", "MENU", COR_HUD,
             new Vector2(-30, -30), new Vector2(220, 90), 40f, controlador, AbrirMenuComSom);
@@ -883,6 +903,7 @@ public class MenuPrincipal : MonoBehaviour
         }
         if (botaoSom    != null) botaoSom.transform.SetAsLastSibling(); // som clicável até no menu
         botaoMenuHud.SetActive(false);
+        if (headerBar != null) headerBar.SetActive(false);
         dicaTreinamento.SetActive(false);
         if (painelPalavra   != null) painelPalavra.SetActive(false);
         if (botaoPular      != null) botaoPular.SetActive(false);
@@ -894,6 +915,7 @@ public class MenuPrincipal : MonoBehaviour
         menuAberto = false;
         telaMenu.SetActive(false);
         botaoMenuHud.SetActive(true);
+        if (headerBar != null) headerBar.SetActive(true);
 
         // No jogo, o som volta para baixo do botão MENU
         if (botaoSom != null)

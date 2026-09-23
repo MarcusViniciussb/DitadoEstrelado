@@ -59,7 +59,7 @@ public class UIControle : MonoBehaviour
         tmp.enableWordWrapping = false;
         tmp.overflowMode       = TextOverflowModes.Overflow;
         tmp.color              = COR_NORMAL;
-        tmp.margin             = new Vector4(0, 50, 0, 0); // abre espaço para o rótulo
+        tmp.margin             = new Vector4(0, 50, 0, 90); // espaço p/ rótulo (topo) e p/ a barra de sinal (base)
         tmp.text               = "";
 
         // Rótulo "PALAVRA:" preso ao topo do cartão (igual ao app de referência)
@@ -72,7 +72,7 @@ public class UIControle : MonoBehaviour
         {
             var canvas = GetComponentInParent<Canvas>();
             var chip = UIFabrica.CriarImagem(canvas.transform, "ChipScore",
-                new Color(0.08f, 0.10f, 0.30f, 0.75f), new Vector2(30, -30),
+                new Color(0.102f, 0.137f, 0.494f, 1f), new Vector2(30, -30),
                 new Vector2(330, 90), UIFabrica.Arredondado(), true);
             UIFabrica.Ancorar(chip, new Vector2(0f, 1f), new Vector2(0f, 1f));
             textoScore = UIFabrica.CriarTexto(chip.transform, "TextoScore", "PONTOS: 0",
@@ -114,7 +114,7 @@ public class UIControle : MonoBehaviour
 
         // Chip de VIDAS (corações), abaixo da pontuação
         var vidasChip = UIFabrica.CriarImagem(raizCanvas, "ChipVidas",
-            new Color(0.08f, 0.10f, 0.30f, 0.75f), new Vector2(30, -135),
+            new Color(0.102f, 0.137f, 0.494f, 1f), new Vector2(30, -135),
             new Vector2(330, 80), UIFabrica.Arredondado(), true);
         UIFabrica.Ancorar(vidasChip, new Vector2(0f, 1f), new Vector2(0f, 1f));
         for (int i = 0; i < 5; i++) // 5 = máximo de vidas
@@ -130,7 +130,7 @@ public class UIControle : MonoBehaviour
 
         // Relógio da palavra, no topo central
         var tempoChip = UIFabrica.CriarImagem(raizCanvas, "ChipTempo",
-            new Color(0.08f, 0.10f, 0.30f, 0.75f), new Vector2(0, -30),
+            new Color(0.102f, 0.137f, 0.494f, 1f), new Vector2(0, -30),
             new Vector2(170, 90), UIFabrica.Arredondado(), true);
         UIFabrica.Ancorar(tempoChip, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
         textoTempo = UIFabrica.CriarTexto(tempoChip.transform, "Texto", "0",
