@@ -28,6 +28,15 @@ public class MenuPrincipal : MonoBehaviour
     static readonly Color COR_SAIR       = new Color(0.816f, 0.282f, 0.227f, 1f); // #D0483A vermelho sair
     static readonly Color COR_HUD        = new Color(0.102f, 0.137f, 0.494f, 1f); // #1A237E
 
+    // Ajuste livre do menu pelo Inspector. Cada botao tem posicao e tamanho
+    // para PC (paisagem) e para Tablet/Celular (retrato), independentes: mexer
+    // num nao mexe no outro. Deixe (0,0) para manter o padrao do codigo.
+    [System.Serializable] public class LayBotao { public Vector2 pos; public Vector2 tam; }
+    [Header("Layout PC (paisagem) - 0,0 = padrao")]
+    public LayBotao pcContinuar, pcJogar, pcAprender, pcTreinar, pcSair;
+    [Header("Layout Tablet/Celular (retrato) - 0,0 = padrao")]
+    public LayBotao tbContinuar, tbJogar, tbAprender, tbTreinar, tbSair;
+
     [Header("Logo Universo IF (canto superior; desmarque para remover)")]
     public bool mostrarLogo = true;
     GameObject logoUniverso;
@@ -387,6 +396,25 @@ public class MenuPrincipal : MonoBehaviour
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
         rt.pivot = new Vector2(0.5f, 0f);
         rt.anchoredPosition = new Vector2(0, 14f);
+    }
+
+    static Vector2 EscolherOu(Vector2 valor, Vector2 padrao) => valor == Vector2.zero ? padrao : valor;
+
+    void Por(RectTransform rt, LayBotao l)
+    {
+        if (rt == null || l == null) return;
+        if (l.pos != Vector2.zero) rt.anchoredPosition = l.pos;
+        if (l.tam != Vector2.zero) rt.sizeDelta        = l.tam;
+    }
+
+    // Aplica o que voce ajustou no Inspector por cima do layout automatico.
+    void AplicarAjustesInspector(bool h)
+    {
+        Por(rtContinuar, h ? pcContinuar : tbContinuar);
+        Por(rtJogar,     h ? pcJogar     : tbJogar);
+        Por(rtAprender,  h ? pcAprender  : tbAprender);
+        Por(rtTreinar,   h ? pcTreinar   : tbTreinar);
+        Por(rtSair,      h ? pcSair      : tbSair);
     }
 
     // Quando ha jogo pausado, CONTINUAR e RECOMECAR ficam lado a lado (no lugar
@@ -870,6 +898,7 @@ public class MenuPrincipal : MonoBehaviour
         larguraDoSlot = h ? 300f : 260f;
         PosicionarObjeto3D();
         PosicionarBotoesContinuar(jogoPausado); // mantem CONTINUAR/RECOMECAR no lugar
+        AplicarAjustesInspector(h);
     }
 
     // O objeto 3D vive no mundo e o cartão vive na interface. Se a posição do
