@@ -77,7 +77,7 @@ public class UIControle : MonoBehaviour
 
         // Rótulo "PALAVRA:" preso ao topo do cartão (igual ao app de referência)
         rotulo = UIFabrica.CriarTexto(transform.parent, "RotuloPalavra", "PALAVRA:",
-            36f, COR_ROTULO, new Vector2(0, -14), new Vector2(900, 50));
+            36f, COR_ROTULO, new Vector2(0, 4), new Vector2(900, 50));
         UIFabrica.Ancorar(rotulo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
 
         // Painel de estatisticas: imagem HUD_Superior (recorte do cluster

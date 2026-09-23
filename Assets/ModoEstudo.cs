@@ -261,7 +261,7 @@ public class ModoEstudo : MonoBehaviour
         if (horizontal)
         {
             // Deitado: texto a esquerda, mao a direita
-            rtTitulo.anchoredPosition    = new Vector2(0, -48);
+            rtTitulo.anchoredPosition    = new Vector2(0, -120);
             UIFabrica.Ancorar(letraGrande, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
             rtLetra.anchoredPosition     = new Vector2(-470, 55);
             UIFabrica.Ancorar(subtitulo, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
@@ -275,7 +275,7 @@ public class ModoEstudo : MonoBehaviour
         else
         {
             // Em pe: tudo empilhado, com espaco entre os blocos
-            rtTitulo.anchoredPosition    = new Vector2(0, -58);
+            rtTitulo.anchoredPosition    = new Vector2(0, -128);
             UIFabrica.Ancorar(letraGrande, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             rtLetra.anchoredPosition     = new Vector2(0, -215);
             UIFabrica.Ancorar(subtitulo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
@@ -502,6 +502,7 @@ public class ModoEstudo : MonoBehaviour
         {
             string arquivo = (letra == "Ç") ? "CEDILHA" : letra;
             var textura = Resources.Load<Texture2D>("SinaisLibras/" + arquivo);
+            if (textura != null) textura.filterMode = FilterMode.Bilinear;
             if (textura == null && letra == "Ç")
                 textura = Resources.Load<Texture2D>("SinaisLibras/Ç");
 
