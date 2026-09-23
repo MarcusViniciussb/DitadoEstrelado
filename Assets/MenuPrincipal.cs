@@ -365,8 +365,8 @@ public class MenuPrincipal : MonoBehaviour
     // Texto pequeno do custo (-5 / -10) na parte de baixo do botao
     void AdicionarCusto(Transform botao, string custo, Color cor)
     {
-        var t = UIFabrica.CriarTexto(botao, "Custo", custo, 30f, cor,
-            new Vector2(0, -46), new Vector2(200, 40));
+        var t = UIFabrica.CriarTexto(botao, "Custo", custo, 44f, cor,
+            new Vector2(0, -46), new Vector2(220, 56));
         t.raycastTarget = false;
         var rt = t.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
@@ -779,8 +779,8 @@ public class MenuPrincipal : MonoBehaviour
         if (painelPalavra != null)
         {
             PosTam((RectTransform)painelPalavra.transform,
-                new Vector2(0, 470), new Vector2(1000, 300),
-                new Vector2(0, 430), new Vector2(1150, 230));
+                new Vector2(0, 450), new Vector2(880, 240),
+                new Vector2(0, 405), new Vector2(980, 180));
 
             if (uiControle == null)
                 uiControle = painelPalavra.GetComponentInChildren<UIControle>(true);

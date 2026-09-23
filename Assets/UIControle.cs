@@ -92,14 +92,14 @@ public class UIControle : MonoBehaviour
             textoScore = OverlayTexto(hud.transform, "Pontos", "0", 60f, Color.white,
                 new Vector2(0.168f, 0.71f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
             containerVidas = OverlayTexto(hud.transform, "Vidas", "", 10f, Color.white,
-                new Vector2(0.132f, 0.315f), new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
+                new Vector2(0.115f, 0.31f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
             textoTempo = OverlayTexto(hud.transform, "Tempo", "0", 68f, COR_TEMPO_OK,
                 new Vector2(0.260f, 0.463f), new Vector2(0.5f, 0.5f), TextAlignmentOptions.Center);
 
             for (int i = 0; i < 5; i++)
             {
                 var coracao = UIFabrica.CriarImagem(containerVidas.transform, "Coracao" + i,
-                    COR_VIDA, new Vector2(i * 44f, 0), new Vector2(40, 40), UIFabrica.Coracao());
+                    COR_VIDA, new Vector2(i * 32f, 0), new Vector2(28, 28), UIFabrica.Coracao());
                 coracao.raycastTarget = false;
                 coracoes.Add(coracao.gameObject);
             }
