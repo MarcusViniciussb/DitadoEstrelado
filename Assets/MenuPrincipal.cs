@@ -311,6 +311,36 @@ public class MenuPrincipal : MonoBehaviour
         rt.anchoredPosition = new Vector2(aDireita ? -30f : 30f, 0f);
     }
 
+    // Estrela com um "X" no centro (icone de "pular esta letra")
+    void AdicionarEstrelaX(Transform botao)
+    {
+        var estrela = UIFabrica.CriarImagem(botao, "Icone", Color.white,
+            Vector2.zero, new Vector2(56, 56), UIFabrica.Estrela());
+        estrela.raycastTarget = false;
+        var rt = estrela.rectTransform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+        rt.pivot     = new Vector2(0f, 0.5f);
+        rt.anchoredPosition = new Vector2(30f, 0f);
+
+        var x = UIFabrica.CriarImagem(estrela.transform, "X",
+            new Color(0.102f, 0.137f, 0.494f, 1f), Vector2.zero, new Vector2(24, 24), UIFabrica.Xis());
+        x.raycastTarget = false;
+        var xr = x.rectTransform;
+        xr.anchorMin = Vector2.zero; xr.anchorMax = Vector2.one;
+        xr.sizeDelta = new Vector2(-24, -24); xr.anchoredPosition = Vector2.zero;
+    }
+
+    // Pinta o rótulo de um botão (texto), sem mexer no resto
+    void PintarRotulo(Button b, Color c)
+    {
+        var t = b.transform.Find("Rotulo");
+        if (t != null)
+        {
+            var tmp = t.GetComponent<TextMeshProUGUI>();
+            if (tmp != null) tmp.color = c;
+        }
+    }
+
     void ConstruirHud()
     {
         // Botão MENU no canto superior direito (visível durante jogo/treinamento)
@@ -339,13 +369,24 @@ public class MenuPrincipal : MonoBehaviour
         riscoSom = risco.gameObject;
         riscoSom.SetActive(false);
 
-        // Botão PULAR LETRA (o PULAR PALAVRA já existe na cena, à direita)
+        // PULAR LETRA: amarelo estrela, com o icone de estrela + X. Texto escuro
+        // porque branco sobre amarelo teria contraste ruim para as criancas.
         var pularLetra = UIFabrica.CriarBotao(transform, "BotaoPularLetra",
-            "PULAR LETRA  -5", new Color(0.55f, 0.4f, 0.85f, 1f),
-            new Vector2(-250, 240), new Vector2(460, 110), 34f, controlador,
+            "PULAR LETRA  -5", new Color(1f, 0.933f, 0.345f, 1f),      // #FFEE58
+            new Vector2(-250, 175), new Vector2(480, 130), 34f, controlador,
             () => gerenciador.PularLetra());
         UIFabrica.Ancorar(pularLetra, new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f));
         botaoPularLetra = pularLetra.gameObject;
+        PintarRotulo(pularLetra, new Color(0.102f, 0.137f, 0.494f, 1f)); // #1A237E
+        AdicionarEstrelaX(pularLetra.transform);
+
+        // PULAR PALAVRA (vem da cena): verde vitalidade, com a seta de avancar
+        if (botaoPular != null)
+        {
+            var imgPular = botaoPular.GetComponent<Image>();
+            if (imgPular != null) imgPular.color = new Color(0.298f, 0.686f, 0.314f, 1f); // #4CAF50
+            AdicionarIcone(botaoPular.transform, UIFabrica.Seta(), false, 52f);
+        }
 
         // Cartão de instruções do modo treinamento
         var painel = UIFabrica.CriarImagem(transform, "DicaTreinamento",
@@ -669,28 +710,28 @@ public class MenuPrincipal : MonoBehaviour
         // Na horizontal o cartao encolheu de 1200 para 1000. Com 1200, somado
         // aos dois botoes de 390, dava 1980 numa tela de 1920: nao cabiam lado
         // a lado e se invadiam.
-        const float ALTURA_DO_RODAPE = 150f;   // meio do cartao acima da borda
-        const float LADO_DOS_BOTOES  = 715f;   // afastamento que evita o cartao
-
+        // Foco central: o painel da palavra sobe e fica em destaque; logo abaixo,
+        // os dois botoes de acao formam um par centralizado, maiores e proximos
+        // um do outro - longe dos cantos, para o dedo alcancar sem toque acidental.
         if (painelPalavra != null)
         {
             PosTam((RectTransform)painelPalavra.transform,
-                new Vector2(0, 330), new Vector2(960, 250),
-                new Vector2(0, ALTURA_DO_RODAPE), new Vector2(1000, 240));
+                new Vector2(0, 470), new Vector2(1000, 300),
+                new Vector2(0, 430), new Vector2(1150, 230));
 
             if (uiControle == null)
                 uiControle = painelPalavra.GetComponentInChildren<UIControle>(true);
             if (uiControle != null)
                 uiControle.DefinirEspacoDoObjeto(h ? 300f : 260f, h ? 145f : 120f);
         }
-        if (botaoPular != null)
+        if (botaoPular != null)               // PULAR PALAVRA, a direita do centro
             PosTam((RectTransform)botaoPular.transform,
-                new Vector2(250, 105), new Vector2(470, 115),
-                new Vector2(LADO_DOS_BOTOES, ALTURA_DO_RODAPE), new Vector2(390, 115));
-        if (botaoPularLetra != null)
+                new Vector2( 250, 175), new Vector2(480, 130),
+                new Vector2( 300, 175), new Vector2(520, 120));
+        if (botaoPularLetra != null)          // PULAR LETRA, a esquerda do centro
             PosTam((RectTransform)botaoPularLetra.transform,
-                new Vector2(-250, 105), new Vector2(470, 115),
-                new Vector2(-LADO_DOS_BOTOES, ALTURA_DO_RODAPE), new Vector2(390, 115));
+                new Vector2(-250, 175), new Vector2(480, 130),
+                new Vector2(-300, 175), new Vector2(520, 120));
 
         larguraDoSlot = h ? 300f : 260f;
         PosicionarObjeto3D();
