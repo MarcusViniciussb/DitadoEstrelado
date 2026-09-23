@@ -14,6 +14,8 @@ public static class UIFabrica
     static Sprite spriteAltoFalante;
     static Sprite spriteEngrenagem;
     static Sprite spriteSeta;
+    static Sprite spriteEstrela;
+    static Sprite spriteXis;
 
     // ── Sprites gerados por código ───────────────────────────────────────────
 
@@ -169,6 +171,70 @@ public static class UIFabrica
         tex.Apply();
         spriteSeta = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
         return spriteSeta;
+    }
+
+    // Estrela de 5 pontas (icone do botao de treinamento). Monta os 10 vertices
+    // (ponta e vale alternados) e pinta o que estiver dentro do poligono.
+    public static Sprite Estrela()
+    {
+        if (spriteEstrela != null) return spriteEstrela;
+
+        int t = 64; float c = (t - 1) / 2f;
+        float rExt = c - 2f, rInt = rExt * 0.40f;
+
+        var v = new Vector2[10];
+        for (int i = 0; i < 10; i++)
+        {
+            float ang = Mathf.Deg2Rad * (90f + i * 36f);           // comeca no topo
+            float r   = (i % 2 == 0) ? rExt : rInt;                // ponta / vale
+            v[i] = new Vector2(c + r * Mathf.Cos(ang), c + r * Mathf.Sin(ang));
+        }
+
+        var tex = new Texture2D(t, t, TextureFormat.ARGB32, false);
+        for (int y = 0; y < t; y++)
+        for (int x = 0; x < t; x++)
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f,
+                PontoNoPoligono(x + 0.5f, y + 0.5f, v) ? 1f : 0f));
+        tex.Apply();
+        spriteEstrela = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
+        return spriteEstrela;
+    }
+
+    // "X" de duas barras cruzadas (icone do botao de sair)
+    public static Sprite Xis()
+    {
+        if (spriteXis != null) return spriteXis;
+
+        int t = 64; float meia = 5.5f;    // meia-espessura das barras
+        float ini = 14f, fim = 50f;       // as barras vao de 14 a 50
+        var tex = new Texture2D(t, t, TextureFormat.ARGB32, false);
+        for (int y = 0; y < t; y++)
+        for (int x = 0; x < t; x++)
+        {
+            bool naDiag1 = Mathf.Abs(x - y) <= meia;              // "\"
+            bool naDiag2 = Mathf.Abs(x + y - (t - 1)) <= meia;    // "/"
+            bool naFaixa = x >= ini - meia && x <= fim + meia &&
+                           y >= ini - meia && y <= fim + meia;
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f,
+                (naFaixa && (naDiag1 || naDiag2)) ? 1f : 0f));
+        }
+        tex.Apply();
+        spriteXis = Sprite.Create(tex, new Rect(0, 0, t, t), new Vector2(0.5f, 0.5f), 100f);
+        return spriteXis;
+    }
+
+    // Ponto dentro de um poligono, pela regra do numero de cruzamentos
+    static bool PontoNoPoligono(float px, float py, Vector2[] poly)
+    {
+        bool dentro = false;
+        for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+        {
+            if ((poly[i].y > py) != (poly[j].y > py) &&
+                px < (poly[j].x - poly[i].x) * (py - poly[i].y) /
+                     (poly[j].y - poly[i].y) + poly[i].x)
+                dentro = !dentro;
+        }
+        return dentro;
     }
 
     // Gradiente vertical (usado como fundo do menu)

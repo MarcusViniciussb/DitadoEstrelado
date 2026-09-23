@@ -21,10 +21,11 @@ public class MenuPrincipal : MonoBehaviour
     // então o jogador se vê e consegue selecionar botões com a mão
     static readonly Color COR_FUNDO_TOPO = new Color(0.09f, 0.11f, 0.32f, 0.72f); // azul-noite
     static readonly Color COR_FUNDO_BASE = new Color(0.32f, 0.16f, 0.46f, 0.72f); // roxo
-    static readonly Color COR_TITULO     = new Color(1f,    0.85f, 0.25f, 1f); // amarelo-estrela
-    static readonly Color COR_JOGAR      = new Color(0.18f, 0.72f, 0.35f, 1f); // verde
-    static readonly Color COR_TREINAR    = new Color(0.15f, 0.50f, 0.90f, 1f); // azul
-    static readonly Color COR_SAIR       = new Color(0.85f, 0.30f, 0.30f, 1f); // vermelho
+    static readonly Color COR_TITULO     = new Color(0.969f, 0.878f, 0.455f, 1f); // #F7E074 amarelo-estrela
+    static readonly Color COR_JOGAR      = new Color(0.149f, 0.816f, 0.486f, 1f); // #26D07C verde vibrante
+    static readonly Color COR_SINAIS     = new Color(0.922f, 0.596f, 0.184f, 1f); // #EB982F laranja aprendizado
+    static readonly Color COR_TREINAR    = new Color(0.149f, 0.584f, 0.816f, 1f); // #2695D0 azul foco
+    static readonly Color COR_SAIR       = new Color(0.816f, 0.282f, 0.227f, 1f); // #D0483A vermelho sair
     static readonly Color COR_HUD        = new Color(0.08f, 0.10f, 0.30f, 0.75f);
 
     [Header("Senha da area do professor (modo treinamento)")]
@@ -241,20 +242,28 @@ public class MenuPrincipal : MonoBehaviour
         botaoContinuar.SetActive(false);
         rtContinuar = continuar.GetComponent<RectTransform>();
 
+        // Acao primaria: maior, no topo da piramide, com a seta de "play"
         var jogar = UIFabrica.CriarBotao(telaMenu.transform, "BotaoJogar", "JOGAR", COR_JOGAR,
             new Vector2(0, 60),   new Vector2(560, 130), 56f, controlador, Jogar);
         rotuloJogar = jogar.transform.Find("Rotulo").GetComponent<TextMeshProUGUI>();
         rtJogar = jogar.GetComponent<RectTransform>();
-        rtAprender = UIFabrica.CriarBotao(telaMenu.transform, "BotaoAprender", "APRENDA OS SINAIS",
-            new Color(0.85f, 0.55f, 0.15f, 1f),
-            new Vector2(0, -75), new Vector2(560, 125), 46f, controlador, AbrirEstudo)
-            .GetComponent<RectTransform>();
-        rtTreinar = UIFabrica.CriarBotao(telaMenu.transform, "BotaoTreinar", "TREINAMENTO", COR_TREINAR,
-            new Vector2(0, -110), new Vector2(560, 130), 52f, controlador, PedirSenha)
-            .GetComponent<RectTransform>();
-        rtSair = UIFabrica.CriarBotao(telaMenu.transform, "BotaoSair", "SAIR", COR_SAIR,
-            new Vector2(0, -280), new Vector2(560, 130), 52f, controlador, Sair)
-            .GetComponent<RectTransform>();
+        AdicionarIcone(jogar.transform, UIFabrica.Seta(), true, 50f);
+
+        // Acoes secundarias: lado a lado, tamanho intermediario
+        var aprender = UIFabrica.CriarBotao(telaMenu.transform, "BotaoAprender", "APRENDA OS SINAIS",
+            COR_SINAIS, new Vector2(0, -75), new Vector2(560, 125), 46f, controlador, AbrirEstudo);
+        rtAprender = aprender.GetComponent<RectTransform>();
+
+        var treinar = UIFabrica.CriarBotao(telaMenu.transform, "BotaoTreinar", "TREINAMENTO", COR_TREINAR,
+            new Vector2(0, -110), new Vector2(560, 130), 52f, controlador, PedirSenha);
+        rtTreinar = treinar.GetComponent<RectTransform>();
+        AdicionarIcone(treinar.transform, UIFabrica.Estrela(), false, 46f);
+
+        // Acao negativa: menor e na base, para evitar toque acidental
+        var sair = UIFabrica.CriarBotao(telaMenu.transform, "BotaoSair", "SAIR", COR_SAIR,
+            new Vector2(0, -280), new Vector2(560, 130), 52f, controlador, Sair);
+        rtSair = sair.GetComponent<RectTransform>();
+        AdicionarIcone(sair.transform, UIFabrica.Xis(), false, 40f);
 
         ConstruirPainelSenha();
 
@@ -262,31 +271,41 @@ public class MenuPrincipal : MonoBehaviour
             "Toque no botão ou aponte o dedo por 3 segundos",
             32f, new Color(1f, 1f, 1f, 0.7f), new Vector2(0, -460), new Vector2(1000, 60), false).rectTransform;
 
-        // ── Créditos: cartão elegante com hierarquia visual ──
+        // ── Rodapé: uma única linha com a identificação do autor ──
+        // Fundo escuro discreto só para a frase ficar legível sobre a câmera.
         var cartaoCreditos = UIFabrica.CriarImagem(telaMenu.transform, "Creditos",
-            new Color(1f, 1f, 1f, 0.07f), new Vector2(0, -700), new Vector2(880, 260),
+            new Color(0f, 0f, 0f, 0.28f), new Vector2(0, -700), new Vector2(1600, 92),
             UIFabrica.Arredondado(), true);
         cartaoCreditos.raycastTarget = false;
         rtCreditos = cartaoCreditos.rectTransform;
-        Transform cred = cartaoCreditos.transform;
 
-        // Linha separadora dourada no topo
-        UIFabrica.CriarImagem(cred, "Linha", new Color(1f, 0.85f, 0.25f, 0.5f),
-            new Vector2(0, 108), new Vector2(320, 4), UIFabrica.Arredondado(), true);
+        // O texto estica junto com o cartão e encolhe a fonte até caber; em
+        // telas estreitas (retrato) ele quebra em duas linhas por conta própria.
+        var autoria = UIFabrica.CriarTexto(cartaoCreditos.transform, "Autoria",
+            "Marcus Vinicius Souza Batista Strabello, especialista em Desenvolvimento " +
+            "de Sistemas Computacionais pelo IFTO, mestrando em Computação Aplicada pelo IFMA.",
+            26f, new Color(1f, 1f, 1f, 0.92f), Vector2.zero, new Vector2(1540, 80), false);
+        autoria.enableAutoSizing = true;
+        autoria.fontSizeMin = 15f;
+        autoria.fontSizeMax = 26f;
+        var autoriaRt = autoria.rectTransform;
+        autoriaRt.anchorMin        = Vector2.zero;
+        autoriaRt.anchorMax        = Vector2.one;
+        autoriaRt.sizeDelta        = new Vector2(-44, -10);
+        autoriaRt.anchoredPosition = Vector2.zero;
+    }
 
-        UIFabrica.CriarTexto(cred, "L1", "Trabalho de Conclusão de Curso",
-            24f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, 74), new Vector2(840, 34), false);
-        var autor = UIFabrica.CriarTexto(cred, "L2", "MARCUS VINICIUS SOUZA BATISTA STRABELLO",
-            34f, Color.white, new Vector2(0, 34), new Vector2(840, 52));
-        autor.enableAutoSizing = true;
-        autor.fontSizeMin = 22f;
-        autor.fontSizeMax = 34f;
-        UIFabrica.CriarTexto(cred, "L3", "Orientação: Prof. Me. Rogério Pereira de Sousa",
-            26f, new Color(1f, 1f, 1f, 0.8f), new Vector2(0, -18), new Vector2(840, 40), false);
-        UIFabrica.CriarTexto(cred, "L4", "Especialização em Desenvolvimento de Sistemas Computacionais",
-            23f, new Color(1f, 0.85f, 0.25f, 0.85f), new Vector2(0, -58), new Vector2(860, 38), false);
-        UIFabrica.CriarTexto(cred, "L5", "Instituto Federal do Tocantins  -  Campus Araguatins",
-            23f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, -94), new Vector2(840, 34), false);
+    // Coloca um ícone branco dentro de um botão, preso a uma das laterais para
+    // não se deslocar quando o botão muda de tamanho entre retrato e paisagem.
+    void AdicionarIcone(Transform botao, Sprite sprite, bool aDireita, float tam)
+    {
+        var icone = UIFabrica.CriarImagem(botao, "Icone", Color.white,
+            Vector2.zero, new Vector2(tam, tam), sprite);
+        icone.raycastTarget = false;
+        var rt = icone.rectTransform;
+        rt.anchorMin = rt.anchorMax = new Vector2(aDireita ? 1f : 0f, 0.5f);
+        rt.pivot     = new Vector2(aDireita ? 1f : 0f, 0.5f);
+        rt.anchoredPosition = new Vector2(aDireita ? -30f : 30f, 0f);
     }
 
     void ConstruirHud()
@@ -542,9 +561,9 @@ public class MenuPrincipal : MonoBehaviour
     }
 
     // Reposiciona TUDO conforme a orientação.
-    // Retrato: menu em coluna única (como no celular).
-    // Paisagem: título numa linha só no topo, botões lado a lado no centro
-    // e créditos no rodapé.
+    // Retrato: menu em coluna única (como no celular), em pirâmide de tamanhos.
+    // Paisagem: título numa linha no topo, JOGAR em destaque, as duas
+    // secundárias lado a lado, SAIR na base, e a autoria no rodapé.
     // Nos dois modos o objeto 3D fica DENTRO do cartão da palavra, no espaço
     // à esquerda, ao lado das letras (não cobre o rosto nem as mãos).
     void AplicarOrientacao()
@@ -582,31 +601,35 @@ public class MenuPrincipal : MonoBehaviour
         Pos(rtSubtitulo, new Vector2(0, 360), new Vector2(0, 322));
         Pos(rtRecorde,   new Vector2(0, 295), new Vector2(0, 268));
 
-        PosTam(rtContinuar, new Vector2(0,  215), new Vector2(560, 120),
-                            new Vector2(0,  180), new Vector2(460, 100));
-        PosTam(rtJogar,     new Vector2(0,   80), new Vector2(560, 125),
-                            new Vector2(0,   45), new Vector2(440, 150));
-        PosTam(rtAprender,  new Vector2(0,  -55), new Vector2(560, 120),
-                            new Vector2(-490, 45), new Vector2(420, 120));
-        PosTam(rtTreinar,   new Vector2(0, -190), new Vector2(560, 120),
-                            new Vector2(490,  45), new Vector2(420, 120));
-        PosTam(rtSair,      new Vector2(0, -325), new Vector2(560, 120),
-                            new Vector2(0,  -90), new Vector2(320, 100));
-        // Bloco do rodape: creditos colados na base e a dica logo acima deles.
-        // Presos a base para continuarem visiveis em qualquer proporcao de
-        // janela, inclusive quando ela nao corresponde a orientacao escolhida.
-        //
-        // As duas alturas saem do TAMANHO REAL do cartao, e nao de numeros
-        // escolhidos a mao. Ancorar deixa o pivo na base do elemento, entao
-        // uma posicao 165 nao significa "a 165 da borda", e sim "comeca em 165
-        // e sobe a propria altura" - com um cartao de 260 o bloco ia ate 425 e
-        // engolia a dica, que estava fixada em 330.
+        // Hierarquia piramidal: JOGAR (primaria) maior no topo; APRENDA e
+        // TREINAMENTO (secundarias) no meio, tamanho intermediario - em coluna
+        // no retrato, lado a lado na paisagem; SAIR (negativa) menor na base,
+        // para reduzir toque acidental. Primeiro par = retrato, segundo = paisagem.
+        PosTam(rtContinuar, new Vector2(0,  180), new Vector2(760, 140),
+                            new Vector2(0,  235), new Vector2(500,  90));
+        PosTam(rtJogar,     new Vector2(0,    5), new Vector2(840, 170),
+                            new Vector2(0,  110), new Vector2(540, 140));
+        PosTam(rtAprender,  new Vector2(0, -175), new Vector2(800, 150),
+                            new Vector2(-330, -45), new Vector2(610, 120));
+        PosTam(rtTreinar,   new Vector2(0, -345), new Vector2(800, 150),
+                            new Vector2( 330, -45), new Vector2(610, 120));
+        PosTam(rtSair,      new Vector2(0, -510), new Vector2(560, 120),
+                            new Vector2(0, -190), new Vector2(380,  90));
+        // Bloco do rodape: a linha de autoria colada na base e a dica logo
+        // acima dela. Presos a base para continuarem visiveis em qualquer
+        // proporcao de janela, inclusive quando ela nao corresponde a
+        // orientacao escolhida. A posicao da dica sai da ALTURA REAL do cartao
+        // (Ancorar poe o pivo na base, entao a dica fica no topo do cartao mais
+        // uma folga), e nao de um numero fixo que quebraria se o cartao mudasse.
         const float MARGEM_DA_BASE = 24f;  // folga entre o cartao e a borda
         const float FOLGA_DA_DICA  = 18f;  // folga entre o cartao e a dica
 
         float topoDosCreditos = MARGEM_DA_BASE;
         if (rtCreditos != null)
         {
+            // Na paisagem a frase cabe numa linha larga e baixa; no retrato ela
+            // quebra em duas, entao o cartao fica mais estreito e mais alto.
+            rtCreditos.sizeDelta = h ? new Vector2(1700, 92) : new Vector2(1000, 150);
             UIFabrica.Ancorar(rtCreditos, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             rtCreditos.anchoredPosition = new Vector2(0, MARGEM_DA_BASE);
             topoDosCreditos = MARGEM_DA_BASE + rtCreditos.sizeDelta.y;
@@ -790,6 +813,9 @@ public class MenuPrincipal : MonoBehaviour
         else               gerenciador.PararJogo();
         if (botaoContinuar != null) botaoContinuar.SetActive(podeContinuar);
         if (rotuloJogar    != null) rotuloJogar.text = podeContinuar ? "RECOMEÇAR" : "JOGAR";
+        // Com o jogo pausado o CONTINUAR ocupa o topo da pilha; o recorde (uma
+        // estatistica de menu ocioso) sai de cena para nao disputar espaco.
+        if (rtRecorde != null) rtRecorde.gameObject.SetActive(!podeContinuar);
 
         controlador.MODO_TREINAMENTO = false;
 
