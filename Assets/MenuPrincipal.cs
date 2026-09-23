@@ -359,7 +359,20 @@ public class MenuPrincipal : MonoBehaviour
         hr.sizeDelta = new Vector2(0, 200);
         hr.anchoredPosition = Vector2.zero;
         header.raycastTarget = false;
-        header.transform.SetAsFirstSibling();
+        // A barra vai para o MESMO pai da camera (o Canvas), logo ACIMA dela e
+        // ABAIXO dos chips (pontos/vidas/tempo, criados depois). Sem isto a
+        // barra ficava atras da imagem da camera e nao aparecia.
+        if (controlador != null && controlador.fundoDoEcra != null)
+        {
+            var camara = controlador.fundoDoEcra.transform;
+            header.transform.SetParent(camara.parent, false);
+            camara.SetAsFirstSibling();               // camera sempre no fundo
+            header.transform.SetSiblingIndex(1);      // barra logo acima da camera
+        }
+        else
+        {
+            header.transform.SetAsFirstSibling();
+        }
         headerBar = header.gameObject;
         headerBar.SetActive(false);
 
