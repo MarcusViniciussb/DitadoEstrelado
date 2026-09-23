@@ -60,12 +60,12 @@ public class UIControle : MonoBehaviour
         tmp.richText           = false;
         tmp.enableAutoSizing   = true;
         tmp.fontSizeMin        = 20f;
-        tmp.fontSizeMax        = 90f;
+        tmp.fontSizeMax        = 130f;
         tmp.alignment          = TextAlignmentOptions.Center;
         tmp.enableWordWrapping = false;
         tmp.overflowMode       = TextOverflowModes.Overflow;
         tmp.color              = COR_NORMAL;
-        tmp.margin             = new Vector4(0, 50, 0, 90); // espaço p/ rótulo (topo) e p/ a barra de sinal (base)
+        tmp.margin             = new Vector4(0, 42, 0, 26); // rótulo no topo; base mais folgada = letras maiores
         tmp.text               = "";
 
         // Rótulo "PALAVRA:" preso ao topo do cartão (igual ao app de referência)
@@ -86,13 +86,15 @@ public class UIControle : MonoBehaviour
             hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f);
             hr.pivot = new Vector2(0.5f, 1f); hr.anchoredPosition = Vector2.zero;
             Canvas.ForceUpdateCanvases();
-            hr.sizeDelta = new Vector2(0f, hr.rect.width * 0.1345f); // ja no tamanho certo
+            float wRef = hr.rect.width;
+            if (wRef < 1f) { var cr = canvas.GetComponent<RectTransform>(); wRef = cr != null ? cr.rect.width : 1920f; }
+            hr.sizeDelta = new Vector2(0f, wRef * 0.1345f); // ja no tamanho certo, sem atraso
             painelStats = hud.gameObject; chipScore = painelStats; hudRect = hr;
 
             textoScore = OverlayTexto(hud.transform, "Pontos", "0", 60f, Color.white,
                 new Vector2(0.168f, 0.71f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
             containerVidas = OverlayTexto(hud.transform, "Vidas", "", 10f, Color.white,
-                new Vector2(0.115f, 0.31f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
+                new Vector2(0.083f, 0.31f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
             textoTempo = OverlayTexto(hud.transform, "Tempo", "0", 68f, COR_TEMPO_OK,
                 new Vector2(0.260f, 0.463f), new Vector2(0.5f, 0.5f), TextAlignmentOptions.Center);
 
