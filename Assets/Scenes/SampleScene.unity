@@ -166,30 +166,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7826ee9b902362f4bbef38e43c11f100, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itens:
-  - palavra: "MA\xC7A"
-    prefab: {fileID: 1829371231341652, guid: 426b44a7575f71e479fab4f4e8431989, type: 3}
-  - palavra: BANANA
-    prefab: {fileID: 1407451490957870, guid: 3ce32ffa6ccf60e4ab65d9e396f43433, type: 3}
-  - palavra: ABACATE
-    prefab: {fileID: 1369001872449898, guid: 2f2e54b9f3898eb46a0b47f9a4d4c52b, type: 3}
-  - palavra: LIMAO
-    prefab: {fileID: 1638444836145330, guid: 031f4f4b1f7d8b7489da0919e18ceac3, type: 3}
-  - palavra: PERA
-    prefab: {fileID: 1763817136346132, guid: 0f3575c567ebe8241a4a6ad511fd7017, type: 3}
-  - palavra: PESSEGO
-    prefab: {fileID: 1541859410316496, guid: 4fe5a7bcbee1651418ea031a87ff53e4, type: 3}
-  - palavra: MELANCIA
-    prefab: {fileID: 1125202155953082, guid: 573bb482e4baeec4386587db7cc07515, type: 3}
-  - palavra: MORANGO
-    prefab: {fileID: 1724972533694550, guid: 63e523ab5d9ce7348b431ae1d689a54d, type: 3}
-  - palavra: AMENDOIM
-    prefab: {fileID: 1329430274803916, guid: 8c8c7d8f829a2d24ebe78eddb5eaff57, type: 3}
+  fases: []
+  versaoDasFases: 0
+  faixaMusicalPorFase: 00000000010000000300000004000000
   pontoDeExibicao: {fileID: 9000005}
-  escalaFruta: {x: 240, y: 240, z: 240}
-  rotacaoFruta: {x: -50, y: 160, z: 0}
+  tamanhoDoObjeto: 4.2
+  rotacaoObjeto: {x: 0, y: 160, z: 0}
   pontosPorLetra: 0
   bonusPorPalavra: 10
+  custoPularLetra: 5
+  custoPularPalavra: 10
+  vidasIniciais: 3
+  pontosPorVidaExtra: 100
+  maximoDeVidas: 5
+  modoSemPressao: 0
   tempoCelebracao: 2.5
 --- !u!1 &9000004
 GameObject:
@@ -234,6 +224,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56b91dc5e521a8d49aa43606ca7e0b00, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ancoraPontos: {x: 0.15, y: 0.71}
+  ancoraVidas: {x: 0.04, y: 0.31}
+  ancoraTempo: {x: 0.26, y: 0.463}
+  tamanhoCoracao: 28
+  espacoCoracao: 32
   gerenciador: {fileID: 9000003}
   controlador: {fileID: 469206617}
   textoScore: {fileID: 0}
@@ -253,6 +248,7 @@ MonoBehaviour:
   controlador: {fileID: 469206617}
   painelPalavra: {fileID: 965364585}
   botaoPular: {fileID: 1877779723}
+  senhaAdmin: 1234
 --- !u!114 &9000008
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1139,15 +1135,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReconhecedorLibras
   bancoDeDados: {fileID: 11400000, guid: 5fc1247038b10c84eaa91b1c244f8b3f, type: 2}
+  limiteDeSeguranca: 12
+  vantagemNecessaria: 0.95
+  distanciaDeCerteza: 3
+  giroMaximoCorrigido: 40
   vizinhosK: 5
   pesoDosAngulos: 0.25
-  letrasDinamicas:
+  pesoDosContatos: 0.5
+  aspectoDaCamera: 1.3333334
+  temProfundidade: 1
+  letrasComMovimento:
   - H
   - J
   - K
+  - W
   - X
   - Z
   - "\xC7"
+  limiteDinamicoDeSeguranca: 9
   mostrarDebug: 0
 --- !u!1 &832575517
 GameObject:

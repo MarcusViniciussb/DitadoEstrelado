@@ -72,7 +72,7 @@ public class UIControle : MonoBehaviour
         tmp.enableWordWrapping = false;
         tmp.overflowMode       = TextOverflowModes.Overflow;
         tmp.color              = COR_NORMAL;
-        tmp.margin             = new Vector4(0, 42, 0, 26); // rótulo no topo; base mais folgada = letras maiores
+        tmp.margin             = new Vector4(0, 42, 0, 64); // tracejado mais alto (a letra identificada fica visivel)
         tmp.text               = "";
 
         // Rótulo "PALAVRA:" preso ao topo do cartão (igual ao app de referência)
@@ -98,7 +98,7 @@ public class UIControle : MonoBehaviour
             hr.sizeDelta = new Vector2(0f, wRef * 0.1345f); // ja no tamanho certo, sem atraso
             painelStats = hud.gameObject; chipScore = painelStats; hudRect = hr;
 
-            textoScore = OverlayTexto(hud.transform, "Pontos", "0", 60f, Color.white,
+            textoScore = OverlayTexto(hud.transform, "Pontos", "0", 46f, Color.white,
                 ancoraPontos,  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
             containerVidas = OverlayTexto(hud.transform, "Vidas", "", 10f, Color.white,
                 ancoraVidas,   new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;

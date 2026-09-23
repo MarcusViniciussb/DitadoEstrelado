@@ -215,6 +215,12 @@ public class MenuPrincipal : MonoBehaviour
             brilhosBase.Add(new Vector2(x, y));
         }
 
+        var logo = UIFabrica.CriarImagem(telaMenu.transform, "LogoUniverso",
+            Color.white, new Vector2(0, -8), new Vector2(120, 103),
+            Resources.Load<Sprite>("ui/logo_universo"));
+        logo.preserveAspect = true; logo.raycastTarget = false;
+        UIFabrica.Ancorar(logo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+
         rtSubtitulo = UIFabrica.CriarTexto(telaMenu.transform, "Subtitulo", "Aprenda o alfabeto em LIBRAS",
             46f, new Color(1f, 1f, 1f, 0.9f), new Vector2(0, 360), new Vector2(1000, 80), false).rectTransform;
 
@@ -242,6 +248,7 @@ public class MenuPrincipal : MonoBehaviour
         botaoContinuar = continuar.gameObject;
         botaoContinuar.SetActive(false);
         rtContinuar = continuar.GetComponent<RectTransform>();
+        AdicionarIcone(continuar.transform, UIFabrica.Seta(), false, 46f);
 
         // Acao primaria: maior, no topo da piramide, com a seta de "play"
         var jogar = UIFabrica.CriarBotao(telaMenu.transform, "BotaoJogar", "JOGAR", COR_JOGAR,
@@ -372,6 +379,37 @@ public class MenuPrincipal : MonoBehaviour
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
         rt.pivot = new Vector2(0.5f, 0f);
         rt.anchoredPosition = new Vector2(0, 14f);
+    }
+
+    // Quando ha jogo pausado, CONTINUAR e RECOMECAR ficam lado a lado (no lugar
+    // do JOGAR), alinhados com os botoes de baixo. Continuar leva a seta de
+    // play; Recomecar leva a mesma seta invertida (voltar).
+    void PosicionarBotoesContinuar(bool pausado)
+    {
+        bool h = telaHorizontal;
+        if (pausado)
+        {
+            if (rtContinuar != null) { rtContinuar.anchoredPosition = h ? new Vector2(-330, 110) : new Vector2(-270, 5);
+                                       rtContinuar.sizeDelta = h ? new Vector2(610, 130) : new Vector2(500, 160); }
+            if (rtJogar != null)     { rtJogar.anchoredPosition = h ? new Vector2(330, 110) : new Vector2(270, 5);
+                                       rtJogar.sizeDelta = h ? new Vector2(610, 130) : new Vector2(500, 160); }
+            FlipIconeJogar(true);
+        }
+        else
+        {
+            if (rtJogar != null) { rtJogar.anchoredPosition = h ? new Vector2(0, 110) : new Vector2(0, 5);
+                                   rtJogar.sizeDelta = h ? new Vector2(540, 140) : new Vector2(840, 170); }
+            FlipIconeJogar(false);
+        }
+    }
+
+    // Inverte o icone do JOGAR: play (->) quando "JOGAR/RECOMECAR" avanca,
+    // seta invertida (<-) para dar sentido de "voltar" no RECOMECAR pausado.
+    void FlipIconeJogar(bool voltar)
+    {
+        if (rtJogar == null) return;
+        var ic = rtJogar.Find("Icone");
+        if (ic != null) { var sc = ic.localScale; sc.x = voltar ? -Mathf.Abs(sc.x) : Mathf.Abs(sc.x); ic.localScale = sc; }
     }
 
     void ConstruirHud()
@@ -706,7 +744,7 @@ public class MenuPrincipal : MonoBehaviour
                                                         : new Vector2(1000, 150);
         if (rtTitulo2  != null) rtTitulo2.gameObject.SetActive(!h);
 
-        Pos(rtTitulo1,   new Vector2(0, 620), new Vector2(0, 425));
+        Pos(rtTitulo1,   new Vector2(0, 600), new Vector2(0, 395));
         Pos(rtSubtitulo, new Vector2(0, 360), new Vector2(0, 322));
         Pos(rtRecorde,   new Vector2(0, 295), new Vector2(0, 268));
 
@@ -925,6 +963,7 @@ public class MenuPrincipal : MonoBehaviour
         // Com o jogo pausado o CONTINUAR ocupa o topo da pilha; o recorde (uma
         // estatistica de menu ocioso) sai de cena para nao disputar espaco.
         if (rtRecorde != null) rtRecorde.gameObject.SetActive(!podeContinuar);
+        PosicionarBotoesContinuar(podeContinuar);
 
         controlador.MODO_TREINAMENTO = false;
 
