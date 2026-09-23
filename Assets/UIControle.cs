@@ -18,7 +18,9 @@ public class UIControle : MonoBehaviour
 
     private TextMeshProUGUI tmp;
     private TextMeshProUGUI rotulo;      // "PALAVRA:" pequeno no topo do cartão
-    private GameObject      chipScore;   // fundo arredondado atrás da pontuação
+    private GameObject      chipScore;   // agora aponta para o painel de stats (imagem HUD)
+    private GameObject      painelStats;  // imagem HUD_Superior (cluster esquerdo)
+    private GameObject      containerVidas;
 
     // Barra "reconhecendo o sinal X..." (feedback em tempo real)
     private GameObject      barraSinal;
@@ -67,18 +69,35 @@ public class UIControle : MonoBehaviour
             36f, COR_ROTULO, new Vector2(0, -14), new Vector2(900, 50));
         UIFabrica.Ancorar(rotulo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
 
-        // Pontuação: cria sozinho um "chip" no canto superior esquerdo da tela
-        if (textoScore == null)
+        // Painel de estatisticas: imagem HUD_Superior (recorte do cluster
+        // esquerdo) com PONTOS, VIDAS e a estrela do tempo. Os valores dinamicos
+        // sao FILHOS da imagem, ancorados por fracao, entao ficam sempre no lugar
+        // certo por cima do desenho, em qualquer tamanho de tela.
         {
             var canvas = GetComponentInParent<Canvas>();
-            var chip = UIFabrica.CriarImagem(canvas.transform, "ChipScore",
-                new Color(0.102f, 0.137f, 0.494f, 1f), new Vector2(30, -30),
-                new Vector2(330, 90), UIFabrica.Arredondado(), true);
-            UIFabrica.Ancorar(chip, new Vector2(0f, 1f), new Vector2(0f, 1f));
-            textoScore = UIFabrica.CriarTexto(chip.transform, "TextoScore", "PONTOS: 0",
-                42f, Color.white, Vector2.zero, new Vector2(320, 90));
-            chipScore = chip.gameObject;
-            chipScore.SetActive(false); // só aparece durante o jogo
+            var stats = UIFabrica.CriarImagem(canvas.transform, "PainelStats",
+                Color.white, new Vector2(20, -18), new Vector2(600, 256),
+                Resources.Load<Sprite>("ui/hud_stats"));
+            stats.raycastTarget = false;
+            UIFabrica.Ancorar(stats, new Vector2(0f, 1f), new Vector2(0f, 1f));
+            painelStats = stats.gameObject;
+            chipScore   = painelStats;   // reaproveita o "shake" e o liga/desliga
+
+            textoScore = OverlayTexto(stats.transform, "Pontos", "0", 46f, Color.white,
+                new Vector2(0.52f, 0.71f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
+            containerVidas = OverlayTexto(stats.transform, "Vidas", "", 10f, Color.white,
+                new Vector2(0.34f, 0.31f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
+            textoTempo = OverlayTexto(stats.transform, "Tempo", "0", 54f, COR_TEMPO_OK,
+                new Vector2(0.825f, 0.463f), new Vector2(0.5f, 0.5f), TextAlignmentOptions.Center);
+
+            for (int i = 0; i < 5; i++) // 5 = maximo de vidas
+            {
+                var coracao = UIFabrica.CriarImagem(containerVidas.transform, "Coracao" + i,
+                    COR_VIDA, new Vector2(i * 44f, 0), new Vector2(38, 38), UIFabrica.Coracao());
+                coracao.raycastTarget = false;
+                coracoes.Add(coracao.gameObject);
+            }
+            painelStats.SetActive(false); // so aparece durante o jogo
         }
 
         // Barra de progresso do sinal: mostra "estou quase aceitando a letra X"
@@ -112,31 +131,20 @@ public class UIControle : MonoBehaviour
         flashTela.rectTransform.sizeDelta = Vector2.zero;
         flashTela.raycastTarget = false;
 
-        // Chip de VIDAS (corações), abaixo da pontuação
-        var vidasChip = UIFabrica.CriarImagem(raizCanvas, "ChipVidas",
-            new Color(0.102f, 0.137f, 0.494f, 1f), new Vector2(30, -135),
-            new Vector2(330, 80), UIFabrica.Arredondado(), true);
-        UIFabrica.Ancorar(vidasChip, new Vector2(0f, 1f), new Vector2(0f, 1f));
-        for (int i = 0; i < 5; i++) // 5 = máximo de vidas
-        {
-            var coracao = UIFabrica.CriarImagem(vidasChip.transform, "Coracao" + i,
-                COR_VIDA, new Vector2(-110 + i * 55, 0), new Vector2(46, 46),
-                UIFabrica.Coracao());
-            coracao.raycastTarget = false;
-            coracoes.Add(coracao.gameObject);
-        }
-        chipVidas = vidasChip.gameObject;
-        chipVidas.SetActive(false);
+    }
 
-        // Relógio da palavra, no topo central
-        var tempoChip = UIFabrica.CriarImagem(raizCanvas, "ChipTempo",
-            new Color(0.102f, 0.137f, 0.494f, 1f), new Vector2(0, -30),
-            new Vector2(170, 90), UIFabrica.Arredondado(), true);
-        UIFabrica.Ancorar(tempoChip, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
-        textoTempo = UIFabrica.CriarTexto(tempoChip.transform, "Texto", "0",
-            48f, COR_TEMPO_OK, Vector2.zero, new Vector2(160, 90));
-        chipTempo = tempoChip.gameObject;
-        chipTempo.SetActive(false);
+    // Cria um texto ancorado por FRACAO (0..1) dentro de um pai, para ficar
+    // por cima de um ponto especifico da imagem do HUD.
+    TextMeshProUGUI OverlayTexto(Transform pai, string nome, string txt, float tam,
+        Color cor, Vector2 anc, Vector2 pivo, TextAlignmentOptions alinhamento)
+    {
+        var t = UIFabrica.CriarTexto(pai, nome, txt, tam, cor, Vector2.zero, new Vector2(260, 80));
+        t.alignment = alinhamento;
+        var rt = t.rectTransform;
+        rt.anchorMin = rt.anchorMax = anc;
+        rt.pivot = pivo;
+        rt.anchoredPosition = Vector2.zero;
+        return t;
     }
 
     // OnEnable/OnDisable: o painel é ligado/desligado pelo MenuPrincipal,
@@ -341,7 +349,7 @@ public class UIControle : MonoBehaviour
     void AtualizarScore(int score)
     {
         if (textoScore != null)
-            textoScore.text = "PONTOS: " + score;
+            textoScore.text = score.ToString();
     }
 
     void Update()

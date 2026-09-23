@@ -342,6 +342,38 @@ public class MenuPrincipal : MonoBehaviour
         }
     }
 
+    // Troca o visual de um botao pela imagem-asset (pilula pronta), escondendo
+    // qualquer rotulo antigo. Mantem o Button e o HoverButton funcionando.
+    void UsarImagemDeBotao(Button b, string sprite)
+    {
+        if (b == null) return;
+        var img = b.GetComponent<Image>();
+        if (img != null)
+        {
+            var sp = Resources.Load<Sprite>(sprite);
+            if (sp != null) { img.sprite = sp; img.type = Image.Type.Simple; img.preserveAspect = true; }
+            img.color = Color.white;
+        }
+        // esconde textos antigos do botao (o rotulo ja esta desenhado na imagem)
+        foreach (var t in b.GetComponentsInChildren<TextMeshProUGUI>(true))
+            t.gameObject.SetActive(false);
+        // remove icones que eu tinha desenhado por codigo
+        foreach (Transform ch in b.transform)
+            if (ch.name == "Icone" || ch.name == "X") Destroy(ch.gameObject);
+    }
+
+    // Texto pequeno do custo (-5 / -10) na parte de baixo do botao
+    void AdicionarCusto(Transform botao, string custo, Color cor)
+    {
+        var t = UIFabrica.CriarTexto(botao, "Custo", custo, 30f, cor,
+            new Vector2(0, -46), new Vector2(200, 40));
+        t.raycastTarget = false;
+        var rt = t.rectTransform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.anchoredPosition = new Vector2(0, 14f);
+    }
+
     void ConstruirHud()
     {
         // Barra única do topo: uma faixa cheia #1A237E atrás de pontos, vidas,
@@ -402,23 +434,21 @@ public class MenuPrincipal : MonoBehaviour
         riscoSom = risco.gameObject;
         riscoSom.SetActive(false);
 
-        // PULAR LETRA: amarelo estrela, com o icone de estrela + X. Texto escuro
-        // porque branco sobre amarelo teria contraste ruim para as criancas.
+        // PULAR LETRA e PULAR PALAVRA usam os assets prontos (a pilula com o
+        // rotulo e o icone ja desenhados). O botao vira apenas a imagem; por
+        // cima, um texto pequeno mostra o custo (-5 / -10) na parte de baixo.
         var pularLetra = UIFabrica.CriarBotao(transform, "BotaoPularLetra",
-            "PULAR LETRA  -5", new Color(1f, 0.933f, 0.345f, 1f),      // #FFEE58
-            new Vector2(-250, 175), new Vector2(480, 130), 34f, controlador,
-            () => gerenciador.PularLetra());
+            "", Color.white, new Vector2(-250, 175), new Vector2(500, 175), 1f,
+            controlador, () => gerenciador.PularLetra());
         UIFabrica.Ancorar(pularLetra, new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f));
         botaoPularLetra = pularLetra.gameObject;
-        PintarRotulo(pularLetra, new Color(0.102f, 0.137f, 0.494f, 1f)); // #1A237E
-        AdicionarEstrelaX(pularLetra.transform);
+        UsarImagemDeBotao(pularLetra, "ui/pular_letra");
+        AdicionarCusto(pularLetra.transform, "-5", new Color(0.42f, 0.30f, 0f, 1f));
 
-        // PULAR PALAVRA (vem da cena): verde vitalidade, com a seta de avancar
         if (botaoPular != null)
         {
-            var imgPular = botaoPular.GetComponent<Image>();
-            if (imgPular != null) imgPular.color = new Color(0.298f, 0.686f, 0.314f, 1f); // #4CAF50
-            AdicionarIcone(botaoPular.transform, UIFabrica.Seta(), false, 52f);
+            UsarImagemDeBotao(botaoPular.GetComponent<Button>(), "ui/pular_palavra");
+            AdicionarCusto(botaoPular.transform, "-10", new Color(0.03f, 0.28f, 0.06f, 1f));
         }
 
         // Cartão de instruções do modo treinamento
@@ -759,12 +789,12 @@ public class MenuPrincipal : MonoBehaviour
         }
         if (botaoPular != null)               // PULAR PALAVRA, a direita do centro
             PosTam((RectTransform)botaoPular.transform,
-                new Vector2( 250, 175), new Vector2(480, 130),
-                new Vector2( 300, 175), new Vector2(520, 120));
+                new Vector2( 270, 175), new Vector2(500, 175),
+                new Vector2( 300, 175), new Vector2(540, 189));
         if (botaoPularLetra != null)          // PULAR LETRA, a esquerda do centro
             PosTam((RectTransform)botaoPularLetra.transform,
-                new Vector2(-250, 175), new Vector2(480, 130),
-                new Vector2(-300, 175), new Vector2(520, 120));
+                new Vector2(-270, 175), new Vector2(500, 175),
+                new Vector2(-300, 175), new Vector2(540, 189));
 
         larguraDoSlot = h ? 300f : 260f;
         PosicionarObjeto3D();
