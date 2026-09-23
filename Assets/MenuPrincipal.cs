@@ -28,6 +28,10 @@ public class MenuPrincipal : MonoBehaviour
     static readonly Color COR_SAIR       = new Color(0.816f, 0.282f, 0.227f, 1f); // #D0483A vermelho sair
     static readonly Color COR_HUD        = new Color(0.102f, 0.137f, 0.494f, 1f); // #1A237E
 
+    [Header("Logo Universo IF (canto superior; desmarque para remover)")]
+    public bool mostrarLogo = true;
+    GameObject logoUniverso;
+
     [Header("Senha da area do professor (modo treinamento)")]
     public string senhaAdmin = "1234";
 
@@ -86,6 +90,7 @@ public class MenuPrincipal : MonoBehaviour
     {
         ConstruirMenu();
         ConstruirHud();
+        CriarLogo();
     }
 
     void Start()
@@ -106,6 +111,7 @@ public class MenuPrincipal : MonoBehaviour
         AplicarOrientacao();
 
         AbrirMenu();
+        TrazerLogoAFrente();
         GerenciadorDeAudio.TocarMusica();
         // O jogador pode ter desligado a música na última vez - reflete no ícone
         riscoSom.SetActive(!GerenciadorDeAudio.MusicaLigada);
@@ -215,12 +221,6 @@ public class MenuPrincipal : MonoBehaviour
             brilhosBase.Add(new Vector2(x, y));
         }
 
-        var logo = UIFabrica.CriarImagem(telaMenu.transform, "LogoUniverso",
-            Color.white, new Vector2(0, -8), new Vector2(120, 103),
-            Resources.Load<Sprite>("ui/logo_universo"));
-        logo.preserveAspect = true; logo.raycastTarget = false;
-        UIFabrica.Ancorar(logo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
-
         rtSubtitulo = UIFabrica.CriarTexto(telaMenu.transform, "Subtitulo", "Aprenda o alfabeto em LIBRAS",
             46f, new Color(1f, 1f, 1f, 0.9f), new Vector2(0, 360), new Vector2(1000, 80), false).rectTransform;
 
@@ -255,7 +255,14 @@ public class MenuPrincipal : MonoBehaviour
             new Vector2(0, 60),   new Vector2(560, 130), 56f, controlador, Jogar);
         rotuloJogar = jogar.transform.Find("Rotulo").GetComponent<TextMeshProUGUI>();
         rtJogar = jogar.GetComponent<RectTransform>();
-        AdicionarIcone(jogar.transform, UIFabrica.Seta(), false, 50f); // ▶ à esquerda, como os demais
+        AdicionarIcone(jogar.transform, UIFabrica.Seta(), false, 50f); // ▶ play (JOGAR)
+        var iconeVoltar = UIFabrica.CriarImagem(jogar.transform, "IconeVoltar", Color.white,
+            Vector2.zero, new Vector2(50, 50), UIFabrica.Seta());
+        iconeVoltar.raycastTarget = false;
+        var ivr = iconeVoltar.rectTransform;
+        ivr.anchorMin = ivr.anchorMax = new Vector2(0f, 0.5f); ivr.pivot = new Vector2(0.5f, 0.5f);
+        ivr.anchoredPosition = new Vector2(55f, 0f); ivr.localScale = new Vector3(-1f, 1f, 1f); // seta invertida = voltar
+        iconeVoltar.gameObject.SetActive(false);
 
         // Acoes secundarias: lado a lado, tamanho intermediario
         var aprender = UIFabrica.CriarBotao(telaMenu.transform, "BotaoAprender", "APRENDA OS SINAIS",
@@ -408,9 +415,23 @@ public class MenuPrincipal : MonoBehaviour
     void FlipIconeJogar(bool voltar)
     {
         if (rtJogar == null) return;
-        var ic = rtJogar.Find("Icone");
-        if (ic != null) { var sc = ic.localScale; sc.x = voltar ? -Mathf.Abs(sc.x) : Mathf.Abs(sc.x); ic.localScale = sc; }
+        var play = rtJogar.Find("Icone");
+        var back = rtJogar.Find("IconeVoltar");
+        if (play != null) play.gameObject.SetActive(!voltar);
+        if (back != null) back.gameObject.SetActive(voltar);
     }
+
+    void CriarLogo()
+    {
+        if (!mostrarLogo) return;
+        var logo = UIFabrica.CriarImagem(transform, "LogoUniverso", Color.white,
+            new Vector2(0, -16), new Vector2(150, 129), Resources.Load<Sprite>("ui/logo_universo"));
+        logo.preserveAspect = true; logo.raycastTarget = false;
+        UIFabrica.Ancorar(logo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+        logoUniverso = logo.gameObject;
+    }
+
+    void TrazerLogoAFrente() { if (logoUniverso != null) logoUniverso.transform.SetAsLastSibling(); }
 
     void ConstruirHud()
     {
@@ -744,8 +765,8 @@ public class MenuPrincipal : MonoBehaviour
                                                         : new Vector2(1000, 150);
         if (rtTitulo2  != null) rtTitulo2.gameObject.SetActive(!h);
 
-        Pos(rtTitulo1,   new Vector2(0, 600), new Vector2(0, 395));
-        Pos(rtSubtitulo, new Vector2(0, 360), new Vector2(0, 322));
+        Pos(rtTitulo1,   new Vector2(0, 585), new Vector2(0, 360));
+        Pos(rtSubtitulo, new Vector2(0, 345), new Vector2(0, 300));
         Pos(rtRecorde,   new Vector2(0, 295), new Vector2(0, 268));
 
         // Hierarquia piramidal: JOGAR (primaria) maior no topo; APRENDA e
@@ -885,6 +906,7 @@ public class MenuPrincipal : MonoBehaviour
             telaEstudo = ModoEstudo.Criar(transform, controlador, FecharEstudo);
         telaMenu.SetActive(false);
         telaEstudo.Abrir(telaHorizontal);
+        TrazerLogoAFrente();
     }
 
     void FecharEstudo()
@@ -1000,6 +1022,7 @@ public class MenuPrincipal : MonoBehaviour
         botaoMenuHud.SetActive(false);   // MENU agora faz parte da faixa HUD
         if (botaoSom != null) botaoSom.SetActive(false); // SOM tambem esta na faixa
         if (headerBar != null) headerBar.SetActive(true);
+        TrazerLogoAFrente();
 
         // No jogo, o som volta para baixo do botão MENU
         if (botaoSom != null)

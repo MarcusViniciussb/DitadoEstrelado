@@ -139,6 +139,11 @@ public class ModoEstudo : MonoBehaviour
         fotoDoSinal.raycastTarget  = false;
         fotoDoSinal.gameObject.SetActive(false);
 
+        // Credito da fonte dos desenhos do alfabeto (pequeno, no rodape)
+        var fonte = UIFabrica.CriarTexto(transform, "FonteCredito", "Fonte: libras.com.br (2026)",
+            22f, new Color(1f, 1f, 1f, 0.55f), new Vector2(0, 14), new Vector2(700, 34), false);
+        UIFabrica.Ancorar(fonte, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+
         aviso = UIFabrica.CriarTexto(areaDaMao, "Aviso", "",
             34f, new Color(1f, 1f, 1f, 0.8f), Vector2.zero, new Vector2(500, 220), false);
 
