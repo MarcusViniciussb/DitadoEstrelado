@@ -15,6 +15,10 @@ public class UIControle : MonoBehaviour
     [Tooltip("Tamanho de cada coracao")]                       public float   tamanhoCoracao = 28f;
     [Tooltip("Distancia entre os coracoes")]                   public float   espacoCoracao  = 32f;
 
+    [Header("Mover os textos do jogo (PALAVRA e tracejado). PC e Tablet separados")]
+    public Vector2 offTextoPC;       // X: +direita / -esquerda ; Y: +cima / -baixo
+    public Vector2 offTextoTablet;
+
     [Header("Gerenciador do jogo")]
     public GerenciadorDeJogo gerenciador;
 
@@ -51,6 +55,7 @@ public class UIControle : MonoBehaviour
     private static readonly Color COR_VIDA        = new Color(0.95f, 0.25f, 0.35f, 1f);
     private static readonly Color COR_TEMPO_OK    = Color.white;
     private static readonly Color COR_TEMPO_FIM   = new Color(1f, 0.35f, 0.25f, 1f);
+    private Vector2 rotuloAuto, tmpBase; private bool basesPegas;
     private string palavraAnterior = null;
     private int    indiceAnterior  = -1;
     private bool   celebrando      = false;
@@ -74,6 +79,7 @@ public class UIControle : MonoBehaviour
         tmp.color              = COR_NORMAL;
         tmp.margin             = new Vector4(0, 42, 0, 64); // tracejado mais alto (a letra identificada fica visivel)
         tmp.text               = "";
+        tmpBase = tmp.rectTransform.anchoredPosition; rotuloAuto = Vector2.zero; basesPegas = true;
 
         // Rótulo "PALAVRA:" preso ao topo do cartão (igual ao app de referência)
         rotulo = UIFabrica.CriarTexto(transform.parent, "RotuloPalavra", "PALAVRA:",
@@ -499,12 +505,22 @@ public class UIControle : MonoBehaviour
         {
             var rt = rotulo.rectTransform;
             rt.anchoredPosition = new Vector2(deslocamentoX, rt.anchoredPosition.y);
+            rotuloAuto = rt.anchoredPosition;
         }
         if (barraSinal != null)
         {
             var rt = (RectTransform)barraSinal.transform;
             rt.anchoredPosition = new Vector2(deslocamentoX + 20f, rt.anchoredPosition.y);
         }
+    }
+
+    // Move os textos do jogo pelo ajuste do Inspector (delta do automatico).
+    public void AjustarTextos(bool horizontal)
+    {
+        if (!basesPegas) return;
+        Vector2 off = horizontal ? offTextoPC : offTextoTablet;
+        if (rotulo != null) rotulo.rectTransform.anchoredPosition = rotuloAuto + off;
+        if (tmp    != null) tmp.rectTransform.anchoredPosition    = tmpBase   + off;
     }
 
     // Mostra/atualiza a barrinha "reconhecendo o sinal X..."

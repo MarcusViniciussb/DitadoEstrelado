@@ -37,6 +37,10 @@ public class MenuPrincipal : MonoBehaviour
     [Header("Layout Tablet/Celular (retrato) - 0,0 = padrao")]
     public LayBotao tbContinuar, tbJogar, tbAprender, tbTreinar, tbSair;
 
+    [Header("Mover o objeto 3D (a fruta/animal). PC e Tablet separados (em pixels)")]
+    public Vector2 off3dPC;
+    public Vector2 off3dTablet;
+
     [Header("Logo Universo IF (canto superior; desmarque para remover)")]
     public bool mostrarLogo = true;
     GameObject logoUniverso;
@@ -899,6 +903,7 @@ public class MenuPrincipal : MonoBehaviour
         PosicionarObjeto3D();
         PosicionarBotoesContinuar(jogoPausado); // mantem CONTINUAR/RECOMECAR no lugar
         AplicarAjustesInspector(h);
+        if (uiControle != null) uiControle.AjustarTextos(h);
     }
 
     // O objeto 3D vive no mundo e o cartão vive na interface. Se a posição do
@@ -925,6 +930,9 @@ public class MenuPrincipal : MonoBehaviour
 
         // Leva esse ponto para a distância em que o objeto é exibido
         Vector3 naTela = camera.WorldToScreenPoint(alvo);
+        Vector2 o3 = telaHorizontal ? off3dPC : off3dTablet;
+        float esc = Screen.height / (telaHorizontal ? 1080f : 1920f);
+        naTela.x += o3.x * esc; naTela.y += o3.y * esc;
         gerenciador.pontoDeExibicao.position =
             camera.ScreenToWorldPoint(new Vector3(naTela.x, naTela.y, DISTANCIA_DO_OBJETO));
 
