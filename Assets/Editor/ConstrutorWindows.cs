@@ -22,6 +22,7 @@ public static class ConstrutorWindows
     public static void Construir()
     {
         ConfigurarIcones.Aplicar();
+        PrepararRecursos.Configurar();
 
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone,
                                            ScriptingImplementation.Mono2x);

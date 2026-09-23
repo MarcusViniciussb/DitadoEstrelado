@@ -247,12 +247,13 @@ public class MenuPrincipal : MonoBehaviour
             new Vector2(0, 60),   new Vector2(560, 130), 56f, controlador, Jogar);
         rotuloJogar = jogar.transform.Find("Rotulo").GetComponent<TextMeshProUGUI>();
         rtJogar = jogar.GetComponent<RectTransform>();
-        AdicionarIcone(jogar.transform, UIFabrica.Seta(), true, 50f);
+        AdicionarIcone(jogar.transform, UIFabrica.Seta(), false, 50f); // ▶ à esquerda, como os demais
 
         // Acoes secundarias: lado a lado, tamanho intermediario
         var aprender = UIFabrica.CriarBotao(telaMenu.transform, "BotaoAprender", "APRENDA OS SINAIS",
             COR_SINAIS, new Vector2(0, -75), new Vector2(560, 125), 46f, controlador, AbrirEstudo);
         rtAprender = aprender.GetComponent<RectTransform>();
+        AdicionarIcone(aprender.transform, Resources.Load<Sprite>("simbolo_libras"), false, 54f);
 
         var treinar = UIFabrica.CriarBotao(telaMenu.transform, "BotaoTreinar", "TREINAMENTO", COR_TREINAR,
             new Vector2(0, -110), new Vector2(560, 130), 52f, controlador, PedirSenha);
@@ -282,8 +283,9 @@ public class MenuPrincipal : MonoBehaviour
         // O texto estica junto com o cartão e encolhe a fonte até caber; em
         // telas estreitas (retrato) ele quebra em duas linhas por conta própria.
         var autoria = UIFabrica.CriarTexto(cartaoCreditos.transform, "Autoria",
-            "Marcus Vinicius Souza Batista Strabello, especialista em Desenvolvimento " +
-            "de Sistemas Computacionais pelo IFTO, mestrando em Computação Aplicada pelo IFMA.",
+            "Desenvolvido por: Marcus Vinicius Souza Batista Strabello, especialista em " +
+            "Desenvolvimento de Sistemas Computacionais pelo IFTO, mestrando em Computação " +
+            "Aplicada pelo IFMA.",
             26f, new Color(1f, 1f, 1f, 0.92f), Vector2.zero, new Vector2(1540, 80), false);
         autoria.enableAutoSizing = true;
         autoria.fontSizeMin = 15f;
@@ -299,6 +301,7 @@ public class MenuPrincipal : MonoBehaviour
     // não se deslocar quando o botão muda de tamanho entre retrato e paisagem.
     void AdicionarIcone(Transform botao, Sprite sprite, bool aDireita, float tam)
     {
+        if (sprite == null) return;   // sem sprite, nao cria um quadrado branco
         var icone = UIFabrica.CriarImagem(botao, "Icone", Color.white,
             Vector2.zero, new Vector2(tam, tam), sprite);
         icone.raycastTarget = false;
@@ -497,6 +500,8 @@ public class MenuPrincipal : MonoBehaviour
     void AbrirOpcoes()
     {
         GerenciadorDeAudio.TocarClique();
+        // Clicar na engrenagem alterna: se o painel ja esta aberto, fecha.
+        if (painelOpcoes.activeSelf) { painelOpcoes.SetActive(false); return; }
         AtualizarRotulosOpcoes();
         painelOpcoes.SetActive(true);
         painelOpcoes.transform.SetAsLastSibling();

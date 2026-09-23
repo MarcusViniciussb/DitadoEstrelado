@@ -18,6 +18,7 @@ public static class ConstrutorAndroid
     {
         // O icone e aplicado aqui para nunca sair um APK com a marca antiga
         ConfigurarIcones.Aplicar();
+        PrepararRecursos.Configurar();
 
         // Ajustes que precisam valer no momento da compilacao
         PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
