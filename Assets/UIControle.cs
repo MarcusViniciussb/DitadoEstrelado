@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using System.Text;
+using UnityEngine.Events;
 
 [RequireComponent(typeof(TextMeshProUGUI))]
 public class UIControle : MonoBehaviour
@@ -21,6 +22,9 @@ public class UIControle : MonoBehaviour
     private GameObject      chipScore;   // agora aponta para o painel de stats (imagem HUD)
     private GameObject      painelStats;  // imagem HUD_Superior (cluster esquerdo)
     private GameObject      containerVidas;
+    private RectTransform   hudRect;       // faixa HUD (mantem o aspecto)
+    private MenuPrincipal   menuPrincipal; // para o botao MENU invisivel
+    private Image           riscoSomHud;   // risco do som na faixa
 
     // Barra "reconhecendo o sinal X..." (feedback em tempo real)
     private GameObject      barraSinal;
@@ -75,29 +79,43 @@ public class UIControle : MonoBehaviour
         // certo por cima do desenho, em qualquer tamanho de tela.
         {
             var canvas = GetComponentInParent<Canvas>();
-            var stats = UIFabrica.CriarImagem(canvas.transform, "PainelStats",
-                Color.white, new Vector2(20, -18), new Vector2(600, 256),
-                Resources.Load<Sprite>("ui/hud_stats"));
-            stats.raycastTarget = false;
-            UIFabrica.Ancorar(stats, new Vector2(0f, 1f), new Vector2(0f, 1f));
-            painelStats = stats.gameObject;
-            chipScore   = painelStats;   // reaproveita o "shake" e o liga/desliga
+            var hud = UIFabrica.CriarImagem(canvas.transform, "HudSuperior",
+                Color.white, Vector2.zero, new Vector2(0, 258), Resources.Load<Sprite>("ui/hud"));
+            hud.raycastTarget = false;
+            var hr = hud.rectTransform;
+            hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f);
+            hr.pivot = new Vector2(0.5f, 1f); hr.anchoredPosition = Vector2.zero;
+            painelStats = hud.gameObject; chipScore = painelStats; hudRect = hr;
 
-            textoScore = OverlayTexto(stats.transform, "Pontos", "0", 46f, Color.white,
-                new Vector2(0.52f, 0.71f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
-            containerVidas = OverlayTexto(stats.transform, "Vidas", "", 10f, Color.white,
-                new Vector2(0.34f, 0.31f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
-            textoTempo = OverlayTexto(stats.transform, "Tempo", "0", 54f, COR_TEMPO_OK,
-                new Vector2(0.825f, 0.463f), new Vector2(0.5f, 0.5f), TextAlignmentOptions.Center);
+            textoScore = OverlayTexto(hud.transform, "Pontos", "0", 60f, Color.white,
+                new Vector2(0.168f, 0.71f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
+            containerVidas = OverlayTexto(hud.transform, "Vidas", "", 10f, Color.white,
+                new Vector2(0.108f, 0.30f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
+            textoTempo = OverlayTexto(hud.transform, "Tempo", "0", 68f, COR_TEMPO_OK,
+                new Vector2(0.260f, 0.463f), new Vector2(0.5f, 0.5f), TextAlignmentOptions.Center);
 
-            for (int i = 0; i < 5; i++) // 5 = maximo de vidas
+            for (int i = 0; i < 5; i++)
             {
                 var coracao = UIFabrica.CriarImagem(containerVidas.transform, "Coracao" + i,
-                    COR_VIDA, new Vector2(i * 44f, 0), new Vector2(38, 38), UIFabrica.Coracao());
+                    COR_VIDA, new Vector2(i * 52f, 0), new Vector2(46, 46), UIFabrica.Coracao());
                 coracao.raycastTarget = false;
                 coracoes.Add(coracao.gameObject);
             }
-            painelStats.SetActive(false); // so aparece durante o jogo
+
+            // MENU e SOM ja estao desenhados na imagem; botoes invisiveis por cima
+            menuPrincipal = FindObjectOfType<MenuPrincipal>();
+            HitInvisivel(hud.transform, "HitMenu", new Vector2(0.878f, 0.55f), new Vector2(0.985f, 0.95f),
+                () => { if (menuPrincipal != null) menuPrincipal.AbrirMenuComSom(); });
+            var hitSom = HitInvisivel(hud.transform, "HitSom", new Vector2(0.905f, 0.05f), new Vector2(0.99f, 0.48f),
+                AlternarSomHud);
+            riscoSomHud = UIFabrica.CriarImagem(hitSom, "Risco",
+                new Color(0.9f, 0.2f, 0.2f, 0.95f), Vector2.zero, new Vector2(70, 8),
+                UIFabrica.Arredondado(), true);
+            riscoSomHud.rectTransform.localEulerAngles = new Vector3(0, 0, 20f);
+            riscoSomHud.raycastTarget = false;
+            riscoSomHud.gameObject.SetActive(!GerenciadorDeAudio.MusicaLigada);
+
+            painelStats.SetActive(false);
         }
 
         // Barra de progresso do sinal: mostra "estou quase aceitando a letra X"
@@ -131,6 +149,33 @@ public class UIControle : MonoBehaviour
         flashTela.rectTransform.sizeDelta = Vector2.zero;
         flashTela.raycastTarget = false;
 
+    }
+
+    // Botao invisivel (so area de clique) sobre um trecho da imagem do HUD.
+    Transform HitInvisivel(Transform pai, string nome, Vector2 aMin, Vector2 aMax, UnityAction acao)
+    {
+        var img = UIFabrica.CriarImagem(pai, nome, new Color(1f, 1f, 1f, 0f), Vector2.zero, Vector2.zero);
+        var rt = img.rectTransform;
+        rt.anchorMin = aMin; rt.anchorMax = aMax; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        img.raycastTarget = true;
+        img.gameObject.AddComponent<Button>().onClick.AddListener(acao);
+        return img.transform;
+    }
+
+    void AlternarSomHud()
+    {
+        GerenciadorDeAudio.TocarClique();
+        GerenciadorDeAudio.AlternarMusica();
+        if (riscoSomHud != null) riscoSomHud.gameObject.SetActive(!GerenciadorDeAudio.MusicaLigada);
+    }
+
+    // Mantem a faixa do HUD na proporcao certa (altura = largura x aspecto)
+    void LateUpdate()
+    {
+        if (hudRect == null) return;
+        float alvo = hudRect.rect.width * 0.1345f;
+        if (Mathf.Abs(hudRect.sizeDelta.y - alvo) > 1f)
+            hudRect.sizeDelta = new Vector2(0f, alvo);
     }
 
     // Cria um texto ancorado por FRACAO (0..1) dentro de um pai, para ficar

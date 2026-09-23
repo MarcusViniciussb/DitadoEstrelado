@@ -382,7 +382,7 @@ public class MenuPrincipal : MonoBehaviour
         // e funcionando; a cor deles virou a mesma da barra, formando uma faixa
         // contínua. A barra só aparece no jogo, junto com o botão MENU.
         var header = UIFabrica.CriarImagem(transform, "HeaderBar",
-            new Color(0.102f, 0.137f, 0.494f, 1f), Vector2.zero, new Vector2(0, 200),
+            new Color(0f, 0f, 0f, 0f), Vector2.zero, new Vector2(0, 200),
             UIFabrica.Arredondado(), true);
         var hr = header.rectTransform;
         hr.anchorMin = new Vector2(0f, 1f);
@@ -563,7 +563,7 @@ public class MenuPrincipal : MonoBehaviour
         displaySenha.text  = new string('*', senhaDigitada.Length);
     }
 
-    void AlternarSom()
+    public void AlternarSom()
     {
         GerenciadorDeAudio.TocarClique();
         GerenciadorDeAudio.AlternarMusica();
@@ -789,12 +789,12 @@ public class MenuPrincipal : MonoBehaviour
         }
         if (botaoPular != null)               // PULAR PALAVRA, a direita do centro
             PosTam((RectTransform)botaoPular.transform,
-                new Vector2( 270, 175), new Vector2(500, 175),
-                new Vector2( 300, 175), new Vector2(540, 189));
+                new Vector2( 270, 175), new Vector2(500, 202),
+                new Vector2( 300, 175), new Vector2(540, 218));
         if (botaoPularLetra != null)          // PULAR LETRA, a esquerda do centro
             PosTam((RectTransform)botaoPularLetra.transform,
-                new Vector2(-270, 175), new Vector2(500, 175),
-                new Vector2(-300, 175), new Vector2(540, 189));
+                new Vector2(-270, 175), new Vector2(500, 202),
+                new Vector2(-300, 175), new Vector2(540, 218));
 
         larguraDoSlot = h ? 300f : 260f;
         PosicionarObjeto3D();
@@ -903,7 +903,7 @@ public class MenuPrincipal : MonoBehaviour
 #endif
     }
 
-    void AbrirMenuComSom()
+    public void AbrirMenuComSom()
     {
         GerenciadorDeAudio.TocarClique();
         AbrirMenu();
@@ -947,6 +947,7 @@ public class MenuPrincipal : MonoBehaviour
         if (botaoSom    != null) botaoSom.transform.SetAsLastSibling(); // som clicável até no menu
         botaoMenuHud.SetActive(false);
         if (headerBar != null) headerBar.SetActive(false);
+        if (botaoSom != null) botaoSom.SetActive(true); // som do menu
         dicaTreinamento.SetActive(false);
         if (painelPalavra   != null) painelPalavra.SetActive(false);
         if (botaoPular      != null) botaoPular.SetActive(false);
@@ -957,7 +958,8 @@ public class MenuPrincipal : MonoBehaviour
     {
         menuAberto = false;
         telaMenu.SetActive(false);
-        botaoMenuHud.SetActive(true);
+        botaoMenuHud.SetActive(false);   // MENU agora faz parte da faixa HUD
+        if (botaoSom != null) botaoSom.SetActive(false); // SOM tambem esta na faixa
         if (headerBar != null) headerBar.SetActive(true);
 
         // No jogo, o som volta para baixo do botão MENU
