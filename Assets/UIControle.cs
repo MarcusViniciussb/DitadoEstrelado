@@ -8,6 +8,13 @@ using UnityEngine.Events;
 [RequireComponent(typeof(TextMeshProUGUI))]
 public class UIControle : MonoBehaviour
 {
+    [Header("Ajuste do HUD superior (fracoes 0..1 da faixa)")]
+    [Tooltip("X,Y do numero de PONTOS sobre o desenho")]      public Vector2 ancoraPontos = new Vector2(0.168f, 0.71f);
+    [Tooltip("X,Y do 1o coracao (as VIDAS)")]                  public Vector2 ancoraVidas  = new Vector2(0.060f, 0.31f);
+    [Tooltip("X,Y do numero do TEMPO sobre a estrela")]        public Vector2 ancoraTempo  = new Vector2(0.260f, 0.463f);
+    [Tooltip("Tamanho de cada coracao")]                       public float   tamanhoCoracao = 28f;
+    [Tooltip("Distancia entre os coracoes")]                   public float   espacoCoracao  = 32f;
+
     [Header("Gerenciador do jogo")]
     public GerenciadorDeJogo gerenciador;
 
@@ -92,16 +99,17 @@ public class UIControle : MonoBehaviour
             painelStats = hud.gameObject; chipScore = painelStats; hudRect = hr;
 
             textoScore = OverlayTexto(hud.transform, "Pontos", "0", 60f, Color.white,
-                new Vector2(0.168f, 0.71f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
+                ancoraPontos,  new Vector2(0f, 0.5f), TextAlignmentOptions.Left);
             containerVidas = OverlayTexto(hud.transform, "Vidas", "", 10f, Color.white,
-                new Vector2(0.083f, 0.31f),  new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
+                ancoraVidas,   new Vector2(0f, 0.5f), TextAlignmentOptions.Left).gameObject;
             textoTempo = OverlayTexto(hud.transform, "Tempo", "0", 68f, COR_TEMPO_OK,
-                new Vector2(0.260f, 0.463f), new Vector2(0.5f, 0.5f), TextAlignmentOptions.Center);
+                ancoraTempo,   new Vector2(0.5f, 0.5f), TextAlignmentOptions.Center);
 
             for (int i = 0; i < 5; i++)
             {
                 var coracao = UIFabrica.CriarImagem(containerVidas.transform, "Coracao" + i,
-                    COR_VIDA, new Vector2(i * 32f, 0), new Vector2(28, 28), UIFabrica.Coracao());
+                    COR_VIDA, new Vector2(i * espacoCoracao, 0),
+                    new Vector2(tamanhoCoracao, tamanhoCoracao), UIFabrica.Coracao());
                 coracao.raycastTarget = false;
                 coracoes.Add(coracao.gameObject);
             }
