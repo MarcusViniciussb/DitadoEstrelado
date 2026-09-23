@@ -263,7 +263,7 @@ public class ModoEstudo : MonoBehaviour
             // Deitado: texto a esquerda, mao a direita
             rtTitulo.anchoredPosition    = new Vector2(0, -120);
             UIFabrica.Ancorar(letraGrande, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-            rtLetra.anchoredPosition     = new Vector2(-470, 55);
+            rtLetra.anchoredPosition     = new Vector2(-470, 130);
             UIFabrica.Ancorar(subtitulo, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
             rtSubtitulo.anchoredPosition = new Vector2(-470, -90);
             rtArea.anchoredPosition      = new Vector2(430, -25);
@@ -277,7 +277,7 @@ public class ModoEstudo : MonoBehaviour
             // Em pe: tudo empilhado, com espaco entre os blocos
             rtTitulo.anchoredPosition    = new Vector2(0, -128);
             UIFabrica.Ancorar(letraGrande, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
-            rtLetra.anchoredPosition     = new Vector2(0, -215);
+            rtLetra.anchoredPosition     = new Vector2(0, -140);
             UIFabrica.Ancorar(subtitulo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
             rtSubtitulo.anchoredPosition = new Vector2(0, -365);
             rtArea.anchoredPosition      = new Vector2(0, -40);

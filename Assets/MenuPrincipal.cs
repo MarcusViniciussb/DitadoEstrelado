@@ -53,6 +53,7 @@ public class MenuPrincipal : MonoBehaviour
     string senhaDigitada = "";
 
     bool  menuAberto;
+    bool  jogoPausado;
     float timerFimDeJogo;
     float timerContagem;
 
@@ -257,11 +258,11 @@ public class MenuPrincipal : MonoBehaviour
         rtJogar = jogar.GetComponent<RectTransform>();
         AdicionarIcone(jogar.transform, UIFabrica.Seta(), false, 50f); // ▶ play (JOGAR)
         var iconeVoltar = UIFabrica.CriarImagem(jogar.transform, "IconeVoltar", Color.white,
-            Vector2.zero, new Vector2(50, 50), UIFabrica.Seta());
-        iconeVoltar.raycastTarget = false;
+            Vector2.zero, new Vector2(54, 54), Resources.Load<Sprite>("ui/recomecar"));
+        iconeVoltar.raycastTarget = false; iconeVoltar.preserveAspect = true;
         var ivr = iconeVoltar.rectTransform;
-        ivr.anchorMin = ivr.anchorMax = new Vector2(0f, 0.5f); ivr.pivot = new Vector2(0.5f, 0.5f);
-        ivr.anchoredPosition = new Vector2(55f, 0f); ivr.localScale = new Vector3(-1f, 1f, 1f); // seta invertida = voltar
+        ivr.anchorMin = ivr.anchorMax = new Vector2(0f, 0.5f); ivr.pivot = new Vector2(0f, 0.5f);
+        ivr.anchoredPosition = new Vector2(28f, 0f);
         iconeVoltar.gameObject.SetActive(false);
 
         // Acoes secundarias: lado a lado, tamanho intermediario
@@ -397,16 +398,16 @@ public class MenuPrincipal : MonoBehaviour
         if (pausado)
         {
             // Paisagem: lado a lado. Retrato: empilhado (coluna), largura cheia.
-            if (rtContinuar != null) { rtContinuar.anchoredPosition = h ? new Vector2(-330, 110) : new Vector2(0, 175);
-                                       rtContinuar.sizeDelta = h ? new Vector2(610, 130) : new Vector2(820, 150); }
-            if (rtJogar != null)     { rtJogar.anchoredPosition = h ? new Vector2(330, 110) : new Vector2(0, 5);
-                                       rtJogar.sizeDelta = h ? new Vector2(610, 130) : new Vector2(820, 160); }
+            if (rtContinuar != null) { rtContinuar.anchoredPosition = h ? new Vector2(-330, 110) : new Vector2(0, 200);
+                                       rtContinuar.sizeDelta = h ? new Vector2(610, 130) : new Vector2(820, 120); }
+            if (rtJogar != null)     { rtJogar.anchoredPosition = h ? new Vector2(330, 110) : new Vector2(0, 55);
+                                       rtJogar.sizeDelta = h ? new Vector2(610, 130) : new Vector2(820, 130); }
             FlipIconeJogar(true);
         }
         else
         {
-            if (rtJogar != null) { rtJogar.anchoredPosition = h ? new Vector2(0, 110) : new Vector2(0, 5);
-                                   rtJogar.sizeDelta = h ? new Vector2(540, 140) : new Vector2(820, 160); }
+            if (rtJogar != null) { rtJogar.anchoredPosition = h ? new Vector2(0, 110) : new Vector2(0, 55);
+                                   rtJogar.sizeDelta = h ? new Vector2(540, 140) : new Vector2(820, 130); }
             FlipIconeJogar(false);
         }
     }
@@ -440,8 +441,8 @@ public class MenuPrincipal : MonoBehaviour
     {
         if (logoUniverso == null) return;
         var rt = (RectTransform)logoUniverso.transform;
-        rt.sizeDelta        = estudo ? new Vector2(86, 74)  : new Vector2(150, 129);
-        rt.anchoredPosition = estudo ? new Vector2(0, -4)   : new Vector2(0, -16);
+        rt.sizeDelta        = estudo ? new Vector2(86, 74)  : new Vector2(100, 86);
+        rt.anchoredPosition = estudo ? new Vector2(0, -4)   : new Vector2(0, -8);
     }
 
     void ConstruirHud()
@@ -776,23 +777,23 @@ public class MenuPrincipal : MonoBehaviour
                                                         : new Vector2(1000, 150);
         if (rtTitulo2  != null) rtTitulo2.gameObject.SetActive(!h);
 
-        Pos(rtTitulo1,   new Vector2(0, 585), new Vector2(0, 330));
-        Pos(rtSubtitulo, new Vector2(0, 345), new Vector2(0, 300));
+        Pos(rtTitulo1,   new Vector2(0, 585), new Vector2(0, 385));
+        Pos(rtSubtitulo, new Vector2(0, 345), new Vector2(0, 250));
         Pos(rtRecorde,   new Vector2(0, 295), new Vector2(0, 268));
 
         // Hierarquia piramidal: JOGAR (primaria) maior no topo; APRENDA e
         // TREINAMENTO (secundarias) no meio, tamanho intermediario - em coluna
         // no retrato, lado a lado na paisagem; SAIR (negativa) menor na base,
         // para reduzir toque acidental. Primeiro par = retrato, segundo = paisagem.
-        PosTam(rtContinuar, new Vector2(0,  175), new Vector2(820, 150),
+        PosTam(rtContinuar, new Vector2(0,  200), new Vector2(820, 120),
                             new Vector2(0,  235), new Vector2(500,  90));
-        PosTam(rtJogar,     new Vector2(0,    5), new Vector2(820, 160),
+        PosTam(rtJogar,     new Vector2(0,   55), new Vector2(820, 130),
                             new Vector2(0,  110), new Vector2(540, 140));
-        PosTam(rtAprender,  new Vector2(0, -165), new Vector2(820, 150),
+        PosTam(rtAprender,  new Vector2(0,  -90), new Vector2(820, 120),
                             new Vector2(-330, -45), new Vector2(610, 120));
-        PosTam(rtTreinar,   new Vector2(0, -335), new Vector2(820, 150),
+        PosTam(rtTreinar,   new Vector2(0, -235), new Vector2(820, 120),
                             new Vector2( 330, -45), new Vector2(610, 120));
-        PosTam(rtSair,      new Vector2(0, -505), new Vector2(820, 150),
+        PosTam(rtSair,      new Vector2(0, -380), new Vector2(820, 120),
                             new Vector2(0, -190), new Vector2(380,  90));
         // Bloco do rodape: a linha de autoria colada na base e a dica logo
         // acima dela. Presos a base para continuarem visiveis em qualquer
@@ -868,6 +869,7 @@ public class MenuPrincipal : MonoBehaviour
 
         larguraDoSlot = h ? 300f : 260f;
         PosicionarObjeto3D();
+        PosicionarBotoesContinuar(jogoPausado); // mantem CONTINUAR/RECOMECAR no lugar
     }
 
     // O objeto 3D vive no mundo e o cartão vive na interface. Se a posição do
@@ -989,6 +991,7 @@ public class MenuPrincipal : MonoBehaviour
         // Fora isso (fim de jogo, treinamento, início), para de verdade.
         bool podeContinuar = gerenciador != null &&
                              gerenciador.JogoIniciado && !gerenciador.JogoTerminado;
+        jogoPausado = podeContinuar;
         if (podeContinuar) gerenciador.Pausar();
         else               gerenciador.PararJogo();
         if (botaoContinuar != null) botaoContinuar.SetActive(podeContinuar);
