@@ -312,9 +312,9 @@ public class MenuPrincipal : MonoBehaviour
         // O texto estica junto com o cartão e encolhe a fonte até caber; em
         // telas estreitas (retrato) ele quebra em duas linhas por conta própria.
         var autoria = UIFabrica.CriarTexto(cartaoCreditos.transform, "Autoria",
-            "Desenvolvido por: Marcus Vinicius Souza Batista Strabello, especialista em " +
-            "Desenvolvimento de Sistemas Computacionais pelo IFTO, mestrando em Computação " +
-            "Aplicada pelo IFMA.",
+            "Desenvolvido por: Marcus Vinicius Souza Batista Strabello, mestrando em Computação " +
+            "Aplicada (PPGCA) pelo IFMA - Campus Monte Castelo. " +
+            "Coordenador: Dr. Daniel Lima Gomes Junior.",
             26f, new Color(1f, 1f, 1f, 0.92f), Vector2.zero, new Vector2(1540, 80), false);
         autoria.enableAutoSizing = true;
         autoria.fontSizeMin = 15f;

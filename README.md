@@ -1,8 +1,11 @@
 # Ditado Estrelado
 
-Jogo educativo de soletracao em LIBRAS, desenvolvido como Trabalho de
-Conclusao de Curso da Pos-Graduacao lato sensu em Desenvolvimento de
-Sistemas Computacionais do Instituto Federal do Tocantins (IFTO) -
+Jogo educativo de soletracao em LIBRAS, desenvolvido no Mestrado do
+Programa de Pos-Graduacao em Computacao Aplicada (PPGCA) do Instituto
+Federal do Maranhao (IFMA) - Campus Monte Castelo.
+
+Versao original criada como Trabalho de Conclusao de Curso da
+Especializacao em Desenvolvimento de Sistemas Computacionais do IFTO -
 Campus Araguatins.
 
 Um objeto 3D aparece na tela (fruta, animal, veiculo ou comida) e o jogador
@@ -75,9 +78,13 @@ maos de outras pessoas.
 
 Autor: Marcus Vinicius Souza Batista Strabello
 
-Orientacao: Prof. Me. Rogerio Pereira de Sousa
+Coordenador: Prof. Dr. Daniel Lima Gomes Junior
 
-Curso: Especializacao em Desenvolvimento de Sistemas Computacionais
-(IFTO - Campus Araguatins)
+Curso: Mestrado em Computacao Aplicada - PPGCA
+(IFMA - Campus Monte Castelo)
+
+Versao original (TCC): Especializacao em Desenvolvimento de Sistemas
+Computacionais (IFTO - Campus Araguatins), orientacao do
+Prof. Me. Rogerio Pereira de Sousa
 
 Modelos 3D: Quaternius e Kay Lousberg (licencas livres, incluidas nas pastas)
