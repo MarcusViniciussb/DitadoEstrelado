@@ -1,12 +1,12 @@
 # Ditado Estrelado
 
-Jogo educativo de soletracao em LIBRAS, desenvolvido no Mestrado do
-Programa de Pos-Graduacao em Computacao Aplicada (PPGCA) do Instituto
-Federal do Maranhao (IFMA) - Campus Monte Castelo.
+Jogo educativo de soletracao em LIBRAS, criado na disciplina de Visao
+Computacional do Mestrado do Programa de Pos-Graduacao em Computacao
+Aplicada (PPGCA) do Instituto Federal do Maranhao (IFMA) - Campus Monte
+Castelo.
 
-Versao original criada como Trabalho de Conclusao de Curso da
-Especializacao em Desenvolvimento de Sistemas Computacionais do IFTO -
-Campus Araguatins.
+Tambem foi o Trabalho de Conclusao de Curso da Especializacao em
+Desenvolvimento de Sistemas Computacionais do IFTO - Campus Araguatins.
 
 Um objeto 3D aparece na tela (fruta, animal, veiculo ou comida) e o jogador
 precisa soletrar o nome dele fazendo os sinais do alfabeto manual de LIBRAS
@@ -83,7 +83,7 @@ Coordenador: Prof. Dr. Daniel Lima Gomes Junior
 Curso: Mestrado em Computacao Aplicada - PPGCA
 (IFMA - Campus Monte Castelo)
 
-Versao original (TCC): Especializacao em Desenvolvimento de Sistemas
+TCC: Especializacao em Desenvolvimento de Sistemas
 Computacionais (IFTO - Campus Araguatins), orientacao do
 Prof. Me. Rogerio Pereira de Sousa
 
