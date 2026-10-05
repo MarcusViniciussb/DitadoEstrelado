@@ -1,4 +1,4 @@
-# Ditado Estrelado — notas técnicas
+# Ditado Estrelado: notas técnicas
 
 Registro do funcionamento interno e dos resultados medidos, para consulta na
 redação do trabalho. Os números vêm de medições sobre o banco de amostras do
@@ -58,7 +58,7 @@ posição na tela e a distância da câmera:
 
 **a) Posições (21 pontos × 3 eixos)**
 Tomadas em relação ao pulso e divididas pelo tamanho da mão (distância do pulso
-à base do dedo médio). Antes disso a palma é endireitada — ver seção 3.
+à base do dedo médio). Antes disso a palma é endireitada, ver seção 3.
 
 **b) Ângulos (19 valores)**
 Quinze ângulos de articulação, três por dedo, medidos entre os segmentos que
@@ -69,7 +69,7 @@ muda de tamanho.
 **c) Contatos (15 distâncias)**
 Distâncias entre pontos que costumam se tocar: do polegar a cada ponta de dedo,
 entre pontas vizinhas, do polegar à base de cada dedo e de cada ponta à própria
-base. Boa parte das letras se distingue exatamente por isso — o que encosta em
+base. Boa parte das letras se distingue exatamente por isso, o que encosta em
 quê. Medidas junto com as 21 posições essas diferenças se diluem; medidas à
 parte, com peso próprio, elas pesam no resultado.
 
@@ -102,7 +102,7 @@ que outra que só entrou na lista por falta de concorrência.
 
 Sete letras do alfabeto manual exigem movimento: **H, J, K, W, X, Z e Ç**. Elas
 são gravadas como sequência de quadros e comparadas por **DTW** (*Dynamic Time
-Warping*), que alinha as duas sequências no tempo antes de compará-las — o mesmo
+Warping*), que alinha as duas sequências no tempo antes de compará-las, o mesmo
 gesto feito mais rápido ou mais devagar ainda corresponde. O custo é dividido
 pelo comprimento das sequências, para não penalizar gestos mais longos.
 
@@ -110,15 +110,15 @@ pelo comprimento das sequências, para não penalizar gestos mais longos.
 
 Duas condições:
 
-1. **Limite de segurança** — a distância precisa ficar abaixo de 12, o que
+1. **Limite de segurança**: a distância precisa ficar abaixo de 12, o que
    apenas descarta uma mão que não se parece com nada do banco.
-2. **Vantagem sobre a rival** — a letra vencedora precisa estar a no máximo
+2. **Vantagem sobre a rival**: a letra vencedora precisa estar a no máximo
    0,95 da distância da segunda letra colocada.
 
 A segunda condição é a que decide, e é **relativa**. Essa foi a correção mais
 importante do projeto. O critério anterior era absoluto: a letra só valia se a
 distância ficasse abaixo de um número fixo. Bastava a mão inclinar ou a leitura
-piorar para *todas* as distâncias subirem juntas e nada mais ser aceito — o
+piorar para *todas* as distâncias subirem juntas e nada mais ser aceito, o
 sistema escolhia a letra certa e a recusava. Comparar as duas distâncias entre
 si mantém a decisão válida mesmo quando a leitura inteira piora.
 
@@ -182,7 +182,7 @@ sistema não aceita nenhuma letra.
 | **Média** | **46,1%** | **4,9%** | **94,3%** | **1,4%** |
 
 Com a mão perfeitamente em pé as duas praticamente empatam. Todo o ganho está
-em deixar de desabar quando a mão inclina ou a leitura piora — que é a situação
+em deixar de desabar quando a mão inclina ou a leitura piora, que é a situação
 comum de uso.
 
 Detalhe que explica a raiz do problema antigo: no cenário com ruído, a
@@ -199,7 +199,7 @@ Acerto global 95,9%, erro 1,4%, recusa 2,7%.
 | A 87% | B 100% | C 100% | D 100% | E 100% | F 62% | G 100% | I 97% | L 100% | M 100% |
 | N 100% | O 100% | P 100% | Q 75% | R 87% | S 97% | T 100% | U 82% | V 97% | Y 86% |
 
-As três piores — F, Q e Y — são exatamente as três com menos amostras.
+As três piores, F, Q e Y, são exatamente as três com menos amostras.
 
 ### Letras com movimento
 
@@ -225,7 +225,7 @@ confundível:
 | C ↔ O | 5,44 |
 | M ↔ N | 5,80 |
 
-Os pares críticos são U/R, F/T e Y/I — todos distinções de contato entre dedos.
+Os pares críticos são U/R, F/T e Y/I, todos distinções de contato entre dedos.
 C/O e M/N, ao contrário da impressão comum, estão entre os pares mais bem
 separados.
 
@@ -251,17 +251,17 @@ sobre-interpretados:
 - **Letras com poucas amostras são penalizadas pelo método.** Numa letra com
   sete amostras, deixar uma de fora remove um sétimo dos dados disponíveis, e os
   cinco vizinhos precisam sair das seis restantes. O desempenho real dessas
-  letras tende a ser melhor que o medido — mas continuam sendo as mais fracas.
+  letras tende a ser melhor que o medido, mas continuam sendo as mais fracas.
 
 ---
 
 ## 8. Melhorias identificadas e não implementadas
 
-1. **Regravar F, Q e Y** — as três letras com poucas amostras. É o maior ganho
+1. **Regravar F, Q e Y**: as três letras com poucas amostras. É o maior ganho
    disponível, e nenhum ajuste de algoritmo o substitui.
 2. **Permitir a gravação de amostras pelo celular.** Hoje o banco só é gravado
-   no computador, pelo teclado. Amostras colhidas na postura real de uso —
-   segurando o aparelho — representariam melhor a condição em que o jogo é
+   no computador, pelo teclado. Amostras colhidas na postura real de uso,
+   segurando o aparelho, representariam melhor a condição em que o jogo é
    usado.
 3. **Ícone adaptativo do Android**, em duas camadas, para acompanhar o formato
    de cada aparelho. Atualmente é usado o ícone clássico, que o sistema recorta
